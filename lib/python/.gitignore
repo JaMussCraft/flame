@@ -1,3 +1,6 @@
+logs/
+imagenet/
+
 build
 dist
 flame.egg-info

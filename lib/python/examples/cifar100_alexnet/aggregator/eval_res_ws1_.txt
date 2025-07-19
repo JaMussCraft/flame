@@ -1,0 +1,15 @@
+Round: 0
+Concatenation Time: 0.8463590145111084
+Test loss: 4.605219600009918
+Test accuracy: 100/10000 (0.01)
+
+Round: 1
+Concatenation Time: 0.8356516361236572
+Test loss: 4.605219600009918
+Test accuracy: 100/10000 (0.01)
+
+Round: 2
+Concatenation Time: 0.841832160949707
+Test loss: 4.605219600009918
+Test accuracy: 100/10000 (0.01)
+
