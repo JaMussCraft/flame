@@ -55,7 +55,7 @@ def analyze_final_results(df: pd.DataFrame) -> pd.DataFrame:
     final_results = df.groupby(['world_size', 'learning_rate', 'enable_swapping', 'rounds', 'seed']).last()
     
     # Calculate statistics
-    stats = final_results.groupby(['world_size', 'learning_rate', 'enable_swapping', 'rounds']).agg({
+    stats = final_results.groupby(['world_size', 'learning_rate', 'enable_swapping', 'rounds', 'seed']).agg({
         'test_accuracy': ['mean', 'std', 'min', 'max'],
         'test_loss': ['mean', 'std', 'min', 'max']
     }).round(4)

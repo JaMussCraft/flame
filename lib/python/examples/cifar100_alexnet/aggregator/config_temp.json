@@ -1,0 +1,78 @@
+{
+  "taskid": "cifar100alexnet_aggregator_001",
+  "backend": "p2p",
+  "brokers": [
+    {
+      "host": "localhost",
+      "sort": "mqtt"
+    },
+    {
+      "host": "localhost:10104",
+      "sort": "p2p"
+    }
+  ],
+  "groupAssociation": {
+    "param-channel": "default"
+  },
+  "channels": [
+    {
+      "description": "Model update is sent from trainer to aggregator and vice-versa",
+      "groupBy": {
+        "type": "tag",
+        "value": [
+          "default"
+        ]
+      },
+      "name": "param-channel",
+      "pair": [
+        "trainer",
+        "aggregator"
+      ],
+      "funcTags": {
+        "aggregator": [
+          "distribute",
+          "aggregate"
+        ],
+        "trainer": [
+          "fetch",
+          "upload"
+        ]
+      }
+    }
+  ],
+  "dataset": "cifar100",
+  "dependencies": [
+    "numpy >= 1.2.0",
+    "torchvision >= 0.8.0"
+  ],
+  "hyperparameters": {
+    "rounds": 10,
+    "world_size": 2,
+    "seed": 123,
+    "enable_swapping": false,
+    "learningRate": 0.001
+  },
+  "baseModel": {
+    "name": "",
+    "version": 1
+  },
+  "job": {
+    "id": "622a358619ab59012eabeefb",
+    "name": "cifar100_alexnet"
+  },
+  "registry": {
+    "sort": "dummy",
+    "uri": ""
+  },
+  "selector": {
+    "sort": "default",
+    "k-args": {}
+  },
+  "optimizer": {
+    "sort": "fedavg",
+    "kwargs": {}
+  },
+  "maxRunTime": 600,
+  "realm": "default",
+  "role": "aggregator"
+}
