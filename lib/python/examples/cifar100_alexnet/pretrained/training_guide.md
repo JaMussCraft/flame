@@ -1,7 +1,7 @@
 # Training Commands for AlexNet on ImageNet
 
 ## Prerequisites
-1. Download ImageNet dataset and organize it as:
+1. Download ImageNet dataset from [imagenet](https://image-net.org/challenges/LSVRC/2012/2012-downloads.php) and organize it as:
    ```
    /path/to/imagenet/
    ├── train/

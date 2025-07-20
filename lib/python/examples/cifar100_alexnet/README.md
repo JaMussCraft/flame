@@ -7,6 +7,10 @@ This directory contains scripts to automate CIFAR100 AlexNet experiments with di
 1. **`run_experiments.py`** - Main automation script that runs experiments with different hyperparameter combinations
 2. **`analyze_results.py`** - Script to analyze and visualize experiment results
 3. **`experiment_results.pkl`** - Pickle file containing all experiment results (generated after running experiments)
+    - random: random initialization, train on cifar100
+    - precifar: pretrain on cifar100, finetune on cifar100
+    - preimagenet: pretrain on imagenet, finetune on cifar100
+
 
 ## Usage
 

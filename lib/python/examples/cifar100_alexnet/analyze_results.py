@@ -202,7 +202,7 @@ def main():
     args = parser.parse_args()
     
     # Change to the results directory
-    base_dir = "/home/cc/FedLora/Flame-Experiments/flame/lib/python/examples/cifar100_alexnet"
+    base_dir = "/home/cc/flame/lib/python/examples/cifar100_alexnet"
     if os.path.exists(base_dir):
         os.chdir(base_dir)
     
