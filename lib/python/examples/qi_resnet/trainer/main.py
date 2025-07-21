@@ -278,14 +278,14 @@ class PyTorchGoogleSpeechTrainer(Trainer):
         self.epochs = self.config.hyperparameters.epochs
         self.batch_size = self.config.hyperparameters.batch_size or 16
         self.num_class = 35
-        self.data_dir = "/mydata/FedScale/benchmark/dataset/data/google_speech"
+        self.data_dir = "../mydata/google_speech/data/"
 
         self.loss_squared = 0
         self.completed_steps = 0
         self.epoch_train_loss = 1e-4
         self.loss_decay = 0.2
         self.local_steps = 30
-        self.meta_dir = "/mydata/flame_dataset/google_speech/"
+        self.meta_dir = "../mydata/google_speech/meta/"
         self.partition_id = 1
 
         self.load_background_noise_data()

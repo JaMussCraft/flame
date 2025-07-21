@@ -50,7 +50,7 @@ from flame.fedscale_utils.transforms_wav import (FixAudioLength, LoadAudio,
                                                     ToTensor)
 
 logger = logging.getLogger(__name__)
-log_file = "/mydata/google_speech_aggregator.log"
+log_file = "../mydata/google_speech_aggregator.log"
 file_handler = logging.FileHandler(log_file)
 logger.addHandler(file_handler)
 
@@ -345,8 +345,8 @@ class PyTorchGoogleSpeechAggregator(TopAggregator):
         self.epochs = self.config.hyperparameters.epochs
         self.batch_size = self.config.hyperparameters.batch_size or 16
         self.num_class = 35
-        self.data_dir = "/mydata/FedScale/benchmark/dataset/data/google_speech/"
-        self.meta_dir = "/mydata/flame_dataset/google_speech/"
+        self.data_dir = "../mydata/google_speech/data/"
+        self.meta_dir = "../mydata/google_speech/meta/"
         self.partition_id = 1
 
     def initialize(self):
@@ -381,7 +381,7 @@ class PyTorchGoogleSpeechAggregator(TopAggregator):
 
         test_loss, test_accuray, acc_5, testRes = test_pytorch_model(self.model, self.test_loader, device='cpu')
 
-        logger.info(f"Wall-clock time: {time.time()} || Test loss: {test_loss} || Test accuracy: {acc_5} || CPU time: {self.cpu_time} || CPU utilization: {self.utilization}")
+        logger.info(f"Wall-clock time: {time.time()} || Test loss: {test_loss} || Test accuracy: {acc_5}")
 
         # update metrics after each evaluation so that the metrics can be
         # logged in a model registry.
