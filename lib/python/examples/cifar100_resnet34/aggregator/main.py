@@ -153,6 +153,7 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         self.con_time = 0
         self.lr = self.config.hyperparameters.learning_rate
         self.rounds = self.config.hyperparameters.rounds
+        self.pretrain = self.config.hyperparameters.pretrain
         
         # Initialize experiment results tracking
         self.experiment_results = []
@@ -193,7 +194,8 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         self.model = ResNet34().to(self.device)
         
         # Load pretrained weights and adapt for CIFAR-100
-        self._load_pretrained_weights()
+        if self.pretrain:
+            self._load_pretrained_weights()
 
         # Evaluate baseline before training
         self.evaluate(baseline=True)

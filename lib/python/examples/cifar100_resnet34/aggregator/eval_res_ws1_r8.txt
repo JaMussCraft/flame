@@ -3,3 +3,13 @@ Concatenation Time: 0
 Test loss: 4.851118569946289
 Test accuracy: 113/10000 (0.0113)
 
+Round: 0
+Concatenation Time: 0
+Test loss: 4.851118618774414
+Test accuracy: 113/10000 (0.0113)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 4.605655249023438
+Test accuracy: 95/10000 (0.0095)
+
