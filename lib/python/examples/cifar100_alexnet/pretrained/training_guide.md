@@ -3,7 +3,7 @@
 ## Prerequisites
 1. Download ImageNet dataset from [imagenet](https://image-net.org/challenges/LSVRC/2012/2012-downloads.php) and organize it as:
    ```
-   /path/to/imagenet/
+   ./imagenet/
    ├── train/
    │   ├── n01440764/
    │   │   ├── image1.JPEG
@@ -23,42 +23,82 @@
    cd /home/cc/FedLora/Flame-Experiments/flame/lib/python/examples/cifar100_alexnet/pretrained
    ```
 
+## Architecture Choice
+
+**NEW:** You can now choose between two AlexNet architectures:
+
+### ImageNet Architecture (Recommended for ImageNet data)
+- **Input Size**: 224×224 pixels
+- **Best For**: High-resolution ImageNet data
+- **Expected Accuracy**: 60-75% on 100 ImageNet classes
+- **Architecture**: Classic ImageNet AlexNet with proper feature extraction layers
+- **Use Case**: When you want to properly utilize ImageNet's visual complexity
+
+### CIFAR-100 Architecture (For federated learning compatibility)
+- **Input Size**: 32×32 pixels (images are resized)
+- **Best For**: Maintaining compatibility with existing federated learning code
+- **Expected Accuracy**: 5-15% on 100 ImageNet classes (limited by severe downsampling)
+- **Architecture**: AlexNet modified for CIFAR-100 input size
+- **Use Case**: When you need pretrained weights for the federated learning AlexNet in main.py
+
+**Recommendation**: Use `--architecture imagenet` for better performance on ImageNet data, or `--architecture cifar100` if you need compatibility with the federated learning system.
+
+## Performance Comparison
+
+| Architecture | Input Size | ImageNet Accuracy | Use Case |
+|--------------|------------|------------------|----------|
+| ImageNet AlexNet | 224×224 | 60-75% | Best performance on ImageNet |
+| CIFAR-100 AlexNet | 32×32 | 5-15% | Federated learning compatibility |
+
+The dramatic performance difference is due to the severe downsampling when using 224×224 ImageNet images with the 32×32 CIFAR-100 architecture. Most visual information is lost in this process.
+
 ## Recommended Training Commands
 
-### 1. Best Overall Performance (Recommended)
-```bash
-python train_imagenet.py --data-path /path/to/imagenet --num-classes 100 --batch-size 128 --epochs 100 --lr 0.01 --optimizer sgd --scheduler step --output-dir ./checkpoints_best
-```
-- **Expected**: ~70-80% top-1 accuracy on 100 classes
-- **Training time**: ~6-8 hours on modern GPU
+### ImageNet Architecture (224x224 input - NEW!)
 
-### 2. Faster Convergence
+#### 1. Best Overall Performance (ImageNet Architecture)
 ```bash
-python train_imagenet.py --data-path /path/to/imagenet --num-classes 100 --batch-size 256 --epochs 80 --lr 0.02 --optimizer sgd --scheduler cosine --output-dir ./checkpoints_fast
+python train_imagenet.py --data-path ./imagenet --num-classes 100 --batch-size 128 --epochs 100 --lr 0.01 --optimizer sgd --scheduler step --architecture imagenet --output-dir ./checkpoints_imagenet_best
 ```
-- **Expected**: ~68-75% top-1 accuracy
+- **Architecture**: ImageNet AlexNet (224x224 input)
+- **Expected**: ~60-75% top-1 accuracy on 100 classes
+- **Training time**: ~8-12 hours on modern GPU
+
+#### 2. Faster Convergence (ImageNet Architecture)
+```bash
+python train_imagenet.py --data-path ./imagenet --num-classes 100 --batch-size 256 --epochs 80 --lr 0.02 --optimizer sgd --scheduler cosine --architecture imagenet --output-dir ./checkpoints_imagenet_fast
+```
+- **Architecture**: ImageNet AlexNet (224x224 input)
+- **Expected**: ~55-70% top-1 accuracy
+- **Training time**: ~6-8 hours
+
+### CIFAR-100 Architecture (32x32 input - Original)
+
+#### 3. Best Overall Performance (CIFAR-100 Architecture)
+```bash
+python train_imagenet.py --data-path ./imagenet --num-classes 100 --batch-size 128 --epochs 100 --lr 0.01 --optimizer sgd --scheduler step --architecture cifar100 --output-dir ./checkpoints_cifar100_best
+```
+- **Architecture**: CIFAR-100 AlexNet (32x32 input)
+- **Expected**: ~5-15% top-1 accuracy on 100 classes (limited by downsampling)
+- **Training time**: ~6-8 hours on modern GPU
+- Actual Best validation accuracy: 5.78%
+
+#### 4. Faster Convergence (CIFAR-100 Architecture)
+```bash
+python train_imagenet.py --data-path ./imagenet --num-classes 100 --batch-size 256 --epochs 80 --lr 0.02 --optimizer sgd --scheduler cosine --architecture cifar100 --output-dir ./checkpoints_cifar100_fast
+```
+- **Architecture**: CIFAR-100 AlexNet (32x32 input)
+- **Expected**: ~3-12% top-1 accuracy
 - **Training time**: ~4-5 hours
 
-### 3. More Stable Training
+#### 5. Quick Test Run (50 classes, CIFAR-100 Architecture)
 ```bash
-python train_imagenet.py --data-path /path/to/imagenet --num-classes 100 --batch-size 128 --epochs 120 --lr 0.005 --optimizer adamw --scheduler step --output-dir ./checkpoints_stable
+python train_imagenet.py --data-path ./imagenet --num-classes 50 --batch-size 128 --epochs 60 --lr 0.01 --optimizer sgd --scheduler step --architecture cifar100 --output-dir ./checkpoints_cifar100_test
 ```
-- **Expected**: ~65-73% top-1 accuracy
-- **Training time**: ~7-9 hours
-
-### 4. Quick Test Run (50 classes)
-```bash
-python train_imagenet.py --data-path /path/to/imagenet --num-classes 50 --batch-size 128 --epochs 60 --lr 0.01 --optimizer sgd --scheduler step --output-dir ./checkpoints_test
-```
-- **Expected**: ~80-85% top-1 accuracy on 50 classes
+- **Architecture**: CIFAR-100 AlexNet (32x32 input)
+- **Expected**: ~8-18% top-1 accuracy on 50 classes
 - **Training time**: ~2-3 hours
-
-### 5. High Performance (if you have good GPU memory)
-```bash
-python train_imagenet.py --data-path /path/to/imagenet --num-classes 100 --batch-size 256 --epochs 100 --lr 0.02 --optimizer sgd --scheduler step --output-dir ./checkpoints_high
-```
-- **Expected**: ~72-82% top-1 accuracy
-- **Training time**: ~5-7 hours
+- Actual Best validation accuracy: 3.68%
 
 ## Resume Training
 If training gets interrupted, you can resume from any checkpoint:
@@ -81,6 +121,7 @@ Create a JSON config file for easier management:
     "scheduler": "step",
     "step_size": 30,
     "gamma": 0.1,
+    "architecture": "imagenet",
     "log_interval": 100,
     "save_interval": 10,
     "output_dir": "./checkpoints",
@@ -88,9 +129,19 @@ Create a JSON config file for easier management:
 }
 ```
 
-Then run:
+Then run with ImageNet architecture:
 ```bash
-python train_imagenet.py --config config.json
+python train_imagenet.py --config config_imagenet.json
+```
+
+Or with CIFAR-100 architecture:
+```bash
+python train_imagenet.py --config config_cifar100.json
+```
+
+You can also override specific parameters:
+```bash
+python train_imagenet.py --config config_imagenet.json --batch-size 256 --epochs 50
 ```
 
 ## Output Files

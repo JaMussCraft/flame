@@ -1,0 +1,19 @@
+{
+    "data_path": "./imagenet",
+    "num_classes": 100,
+    "batch_size": 128,
+    "epochs": 100,
+    "learning_rate": 0.01,
+    "optimizer": "sgd",
+    "momentum": 0.9,
+    "weight_decay": 1e-4,
+    "scheduler": "step",
+    "step_size": 30,
+    "gamma": 0.1,
+    "architecture": "imagenet",
+    "log_interval": 100,
+    "save_interval": 10,
+    "output_dir": "./checkpoints_imagenet",
+    "num_workers": 4,
+    "seed": 42
+}

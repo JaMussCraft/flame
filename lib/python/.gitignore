@@ -1,5 +1,6 @@
 logs/
 imagenet/
+checkpoint*/
 mydata/
 
 build

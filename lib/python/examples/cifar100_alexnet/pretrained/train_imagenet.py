@@ -14,6 +14,7 @@ from typing import Dict, Tuple, Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data as data
 from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
@@ -23,7 +24,7 @@ from PIL import Image
 
 # Add parent directory to path to import AlexNet
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'aggregator'))
-from main import AlexNet, set_seed
+from main import AlexNet as CIFAR100AlexNet, set_seed
 
 # Setup logging
 logging.basicConfig(
@@ -37,37 +38,111 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class ImageNetAlexNet(nn.Module):
+    """AlexNet designed for ImageNet (224x224 input)."""
+    
+    def __init__(self, num_classes=1000):
+        super(ImageNetAlexNet, self).__init__()
+        
+        # Convolutional layers for 224x224 input
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),  # 224->55
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),  # 55->27
+            
+            nn.Conv2d(64, 192, kernel_size=5, padding=2),  # 27->27
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),  # 27->13
+            
+            nn.Conv2d(192, 384, kernel_size=3, padding=1),  # 13->13
+            nn.ReLU(inplace=True),
+            nn.Conv2d(384, 256, kernel_size=3, padding=1),  # 13->13
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),  # 13->13
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),  # 13->6
+        )
+        
+        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
+        
+        self.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return F.log_softmax(x, dim=1)
+
+
+class AlexNet(nn.Module):
+    """Wrapper class to choose between CIFAR-100 and ImageNet AlexNet."""
+    
+    def __init__(self, num_classes=100, architecture='cifar100'):
+        super(AlexNet, self).__init__()
+        self.architecture = architecture
+        
+        if architecture == 'imagenet':
+            self.model = ImageNetAlexNet(num_classes)
+        elif architecture == 'cifar100':
+            self.model = CIFAR100AlexNet(num_classes)
+        else:
+            raise ValueError(f"Unsupported architecture: {architecture}. Choose 'imagenet' or 'cifar100'")
+    
+    def forward(self, x):
+        return self.model(x)
+
+
 class ImageNetSubset(datasets.ImageFolder):
     """ImageNet subset dataset class."""
     
-    def __init__(self, root: str, subset_classes: int = 100, **kwargs):
+    def __init__(self, root: str, selected_classes: list = None, subset_classes: int = 100, **kwargs):
         """
         Initialize ImageNet subset.
         
         Args:
             root: Path to ImageNet dataset
-            subset_classes: Number of classes to use (default 100)
+            selected_classes: List of specific class names to use. If None, will select first subset_classes
+            subset_classes: Number of classes to use (default 100) - only used if selected_classes is None
             **kwargs: Additional arguments for ImageFolder
         """
         super().__init__(root, **kwargs)
         
         # Select subset of classes
-        if subset_classes < len(self.classes):
+        if selected_classes is not None:
+            # Use provided class list
+            selected_classes = [cls for cls in selected_classes if cls in self.classes]
+            if len(selected_classes) == 0:
+                raise ValueError("None of the selected classes found in dataset")
+        elif subset_classes < len(self.classes):
+            # Select first N classes if no specific list provided
             selected_classes = sorted(self.classes)[:subset_classes]
-            class_to_idx = {cls: idx for idx, cls in enumerate(selected_classes)}
-            
-            # Filter samples
-            samples = []
-            for path, target in self.samples:
-                class_name = self.classes[target]
-                if class_name in selected_classes:
-                    new_target = class_to_idx[class_name]
-                    samples.append((path, new_target))
-            
-            self.samples = samples
-            self.targets = [s[1] for s in samples]
-            self.classes = selected_classes
-            self.class_to_idx = class_to_idx
+        else:
+            # Use all classes
+            selected_classes = self.classes
+        
+        class_to_idx = {cls: idx for idx, cls in enumerate(selected_classes)}
+        
+        # Filter samples
+        samples = []
+        for path, target in self.samples:
+            class_name = self.classes[target]
+            if class_name in selected_classes:
+                new_target = class_to_idx[class_name]
+                samples.append((path, new_target))
+        
+        self.samples = samples
+        self.targets = [s[1] for s in samples]
+        self.classes = selected_classes
+        self.class_to_idx = class_to_idx
 
 
 class ImageNetTrainer:
@@ -82,7 +157,8 @@ class ImageNetTrainer:
         set_seed(config['seed'])
         
         # Initialize model
-        self.model = AlexNet(num_classes=config['num_classes']).to(self.device)
+        architecture = config.get('architecture', 'cifar100')
+        self.model = AlexNet(num_classes=config['num_classes'], architecture=architecture).to(self.device)
         
         # Setup data loaders
         self.train_loader, self.val_loader = self._setup_data_loaders()
@@ -107,41 +183,96 @@ class ImageNetTrainer:
     def _setup_data_loaders(self) -> Tuple[data.DataLoader, data.DataLoader]:
         """Setup train and validation data loaders."""
         
-        # ImageNet normalization values
-        normalize = transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225]
-        )
+        # Get architecture from config
+        architecture = self.config.get('architecture', 'cifar100')
         
-        # Training transforms with augmentation
-        train_transform = transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
-            transforms.ToTensor(),
-            normalize,
-        ])
+        # Set transforms based on architecture
+        if architecture == 'imagenet':
+            # ImageNet normalization values and 224x224 input
+            normalize = transforms.Normalize(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]
+            )
+            
+            # Training transforms with augmentation for ImageNet
+            train_transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.RandomCrop(224),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
+                transforms.ToTensor(),
+                normalize,
+            ])
+            
+            # Validation transforms for ImageNet
+            val_transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                normalize,
+            ])
+        else:  # cifar100 architecture
+            # CIFAR-100 normalization values and 32x32 input
+            normalize = transforms.Normalize(
+                mean=[0.5071, 0.4867, 0.4408],
+                std=[0.2675, 0.2565, 0.2761]
+            )
+            
+            # Training transforms with augmentation - resize to 32x32 for CIFAR-100 AlexNet
+            train_transform = transforms.Compose([
+                transforms.Resize((32, 32)),  # Force resize to exactly 32x32
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
+                transforms.ToTensor(),
+                normalize,
+            ])
+            
+            # Validation transforms - resize to 32x32 for CIFAR-100 model
+            val_transform = transforms.Compose([
+                transforms.Resize((32, 32)),  # Force resize to exactly 32x32
+                transforms.ToTensor(),
+                normalize,
+            ])
         
-        # Validation transforms
-        val_transform = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])
+        # First, determine common classes between train and val directories
+        train_path = os.path.join(self.config['data_path'], 'train')
+        val_path = os.path.join(self.config['data_path'], 'val')
         
-        # Create datasets
+        # Get available classes in each directory
+        train_classes = set([d for d in os.listdir(train_path) if os.path.isdir(os.path.join(train_path, d))])
+        val_classes = set([d for d in os.listdir(val_path) if os.path.isdir(os.path.join(val_path, d))])
+        
+        # Find common classes
+        common_classes = sorted(list(train_classes.intersection(val_classes)))
+        
+        if len(common_classes) == 0:
+            raise ValueError("No common classes found between train and validation sets")
+        
+        # Select subset of common classes
+        num_classes_to_use = min(self.config['num_classes'], len(common_classes))
+        selected_classes = common_classes[:num_classes_to_use]
+        
+        logger.info(f"Found {len(train_classes)} training classes, {len(val_classes)} validation classes")
+        logger.info(f"Common classes: {len(common_classes)}")
+        logger.info(f"Using {len(selected_classes)} classes for training and validation")
+        logger.info(f"Selected classes: {selected_classes[:10]}..." if len(selected_classes) > 10 else f"Selected classes: {selected_classes}")
+        
+        # Create datasets with the same selected classes
         train_dataset = ImageNetSubset(
-            root=os.path.join(self.config['data_path'], 'train'),
-            subset_classes=self.config['num_classes'],
+            root=train_path,
+            selected_classes=selected_classes,
             transform=train_transform
         )
         
         val_dataset = ImageNetSubset(
-            root=os.path.join(self.config['data_path'], 'val'),
-            subset_classes=self.config['num_classes'],
+            root=val_path,
+            selected_classes=selected_classes,
             transform=val_transform
         )
+        
+        # Verify both datasets have the same classes
+        if train_dataset.classes != val_dataset.classes:
+            raise ValueError("Train and validation datasets have different classes!")
         
         # Create data loaders
         train_loader = data.DataLoader(
@@ -430,6 +561,9 @@ def get_default_config() -> Dict:
         'batch_size': 128,
         'num_workers': 4,
         
+        # Model
+        'architecture': 'imagenet',  # 'imagenet' or 'cifar100'
+        
         # Training
         'epochs': 100,
         'learning_rate': 0.01,
@@ -462,6 +596,8 @@ def main():
     parser.add_argument('--lr', type=float, default=0.01, help='Learning rate')
     parser.add_argument('--optimizer', type=str, default='sgd', choices=['sgd', 'adam', 'adamw'])
     parser.add_argument('--scheduler', type=str, default='step', choices=['step', 'cosine', 'none'])
+    parser.add_argument('--architecture', type=str, default='imagenet', choices=['imagenet', 'cifar100'], 
+                        help='Architecture to use: imagenet (224x224) or cifar100 (32x32)')
     parser.add_argument('--resume', type=str, help='Path to checkpoint to resume from')
     parser.add_argument('--output-dir', type=str, default='./checkpoints', help='Output directory')
     
@@ -491,6 +627,8 @@ def main():
         config['scheduler'] = args.scheduler
     elif args.scheduler == 'none':
         config['scheduler'] = None
+    if args.architecture:
+        config['architecture'] = args.architecture
     if args.output_dir:
         config['output_dir'] = args.output_dir
     
