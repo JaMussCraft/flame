@@ -3,6 +3,33 @@
 Analysis script for CIFAR100 AlexNet experiment results.
 
 This script loads and analyzes the experiment results saved in pickle format.
+
+NEW FUNCTIONALITY:
+- plot_specific_experiments(): Plot learning curves for experiments matching specific criteria
+- Interactive plotting mode: Use --plot-specific flag for guided plotting
+- Convenience functions: plot_by_world_size(), plot_by_learning_rate(), plot_swapping_comparison()
+
+USAGE EXAMPLES:
+1. Interactive plotting:
+   python analyze_results.py --plot-specific
+
+2. Programmatic plotting:
+   from analyze_results import plot_specific_experiments, load_experiment_results, results_to_dataframe
+   
+   results = load_experiment_results("experiment_results.pkl")
+   df = results_to_dataframe(results)
+   
+   # Plot specific configurations
+   plot_specific_experiments(df, 
+                           world_sizes=[2, 4], 
+                           learning_rates=[0.0001, 0.001],
+                           enable_swapping=[True, False])
+
+3. Using convenience functions:
+   from analyze_results import plot_by_world_size, plot_swapping_comparison
+   
+   plot_by_world_size([2, 4, 8])
+   plot_swapping_comparison(world_sizes=[2, 4])
 """
 
 import pickle
@@ -33,6 +60,7 @@ def results_to_dataframe(results_dict: Dict) -> pd.DataFrame:
     rows = []
     
     for key, experiment_results in results_dict.items():
+        # world_size, learning_rate, enable_swapping, enable_layerwise_swapping, rounds, seed = key
         world_size, learning_rate, enable_swapping, rounds, seed = key
         
         for round_num, test_loss, test_accuracy in experiment_results:
@@ -149,6 +177,122 @@ def print_best_configurations(df: pd.DataFrame, top_n: int = 5):
         print(f"{i+1}. World Size: {world_size}, LR: {learning_rate}, Swap: {enable_swapping}, "
               f"Rounds: {rounds}, Accuracy: {accuracy:.4f}")
 
+def plot_specific_experiments(df: pd.DataFrame, 
+                            world_sizes: List[int] = None,
+                            learning_rates: List[float] = None,
+                            enable_swapping: List[bool] = None,
+                            rounds_list: List[int] = None,
+                            seeds: List[int] = None,
+                            save_plots: bool = True,
+                            plot_title: str = "Learning Curves for Selected Experiments"):
+    """
+    Plot learning curves for experiments matching the specified criteria.
+    
+    Args:
+        df: DataFrame containing experiment results
+        world_sizes: List of world sizes to include (None means all)
+        learning_rates: List of learning rates to include (None means all)
+        enable_swapping: List of swapping configs to include (None means all)
+        rounds_list: List of round counts to include (None means all)
+        seeds: List of seeds to include (None means all)
+        save_plots: Whether to save the plot to file
+        plot_title: Title for the plot
+    """
+    # Filter the dataframe based on specified criteria
+    filtered_df = df.copy()
+    
+    if world_sizes is not None:
+        filtered_df = filtered_df[filtered_df['world_size'].isin(world_sizes)]
+    if learning_rates is not None:
+        filtered_df = filtered_df[filtered_df['learning_rate'].isin(learning_rates)]
+    if enable_swapping is not None:
+        filtered_df = filtered_df[filtered_df['enable_swapping'].isin(enable_swapping)]
+    if rounds_list is not None:
+        filtered_df = filtered_df[filtered_df['rounds'].isin(rounds_list)]
+    if seeds is not None:
+        filtered_df = filtered_df[filtered_df['seed'].isin(seeds)]
+    
+    if len(filtered_df) == 0:
+        print("No experiments match the specified criteria.")
+        return
+    
+    # Get unique configurations
+    unique_configs = filtered_df[['world_size', 'learning_rate', 'enable_swapping', 'rounds']].drop_duplicates()
+    
+    print(f"Found {len(unique_configs)} unique configurations matching criteria:")
+    for _, config in unique_configs.iterrows():
+        matching_seeds = sorted(filtered_df[
+            (filtered_df['world_size'] == config['world_size']) &
+            (filtered_df['learning_rate'] == config['learning_rate']) &
+            (filtered_df['enable_swapping'] == config['enable_swapping']) &
+            (filtered_df['rounds'] == config['rounds'])
+        ]['seed'].unique())
+        print(f"  WS={config['world_size']}, LR={config['learning_rate']}, "
+              f"Swap={config['enable_swapping']}, R={config['rounds']}, Seeds={matching_seeds}")
+    
+    # Create the plot
+    plt.figure(figsize=(15, 10))
+    
+    # Use different colors and markers for different configurations
+    colors = plt.cm.tab10(np.linspace(0, 1, len(unique_configs)))
+    markers = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
+    
+    for i, (_, config) in enumerate(unique_configs.iterrows()):
+        config_data = filtered_df[
+            (filtered_df['world_size'] == config['world_size']) &
+            (filtered_df['learning_rate'] == config['learning_rate']) &
+            (filtered_df['enable_swapping'] == config['enable_swapping']) &
+            (filtered_df['rounds'] == config['rounds'])
+        ]
+        
+        # Calculate mean and std across seeds for this configuration
+        mean_data = config_data.groupby('round')['test_accuracy'].mean()
+        std_data = config_data.groupby('round')['test_accuracy'].std()
+        
+        label = f"WS={config['world_size']}, LR={config['learning_rate']}, Swap={config['enable_swapping']}"
+        
+        # Plot mean with error bars
+        plt.plot(mean_data.index, mean_data.values, 
+                label=label, 
+                color=colors[i], 
+                marker=markers[i % len(markers)],
+                linewidth=2, 
+                markersize=6)
+        
+        # Add error bars (standard deviation)
+        plt.fill_between(mean_data.index, 
+                        mean_data.values - std_data.fillna(0).values, 
+                        mean_data.values + std_data.fillna(0).values, 
+                        color=colors[i], 
+                        alpha=0.2)
+    
+    plt.title(plot_title, fontsize=16, fontweight='bold')
+    plt.xlabel('Round', fontsize=12)
+    plt.ylabel('Test Accuracy', fontsize=12)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    if save_plots:
+        # Create a filename based on the filters
+        filename_parts = []
+        if world_sizes is not None:
+            filename_parts.append(f"ws{'-'.join(map(str, world_sizes))}")
+        if learning_rates is not None:
+            filename_parts.append(f"lr{'-'.join([str(lr).replace('.', '') for lr in learning_rates])}")
+        if enable_swapping is not None:
+            filename_parts.append(f"swap{'-'.join(map(str, enable_swapping))}")
+        if rounds_list is not None:
+            filename_parts.append(f"r{'-'.join(map(str, rounds_list))}")
+        if seeds is not None:
+            filename_parts.append(f"seed{'-'.join(map(str, seeds))}")
+        
+        filename = f"learning_curves_{'_'.join(filename_parts) if filename_parts else 'all'}.png"
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Plot saved as: {filename}")
+    
+    plt.show()
+
 def generate_summary_report(results_file: str = "experiment_results.pkl"):
     """Generate a comprehensive summary report."""
     print("CIFAR100 AlexNet Experiment Results Analysis")
@@ -177,7 +321,10 @@ def generate_summary_report(results_file: str = "experiment_results.pkl"):
     # Final results analysis
     print("\nFinal Results Statistics:")
     final_stats = analyze_final_results(df)
-    print(final_stats)
+    
+    # Set pandas display options to show full table
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None, 'display.max_colwidth', None):
+        print(final_stats)
     
     # Best configurations
     print_best_configurations(df)
@@ -189,6 +336,55 @@ def generate_summary_report(results_file: str = "experiment_results.pkl"):
     
     print("\nAnalysis complete! Check the generated plots.")
 
+def plot_experiments_interactive():
+    """Interactive function to plot specific experiments."""
+    results_file = "experiment_results.pkl"
+    
+    # Load results
+    results = load_experiment_results(results_file)
+    if not results:
+        print("No results to analyze.")
+        return
+    
+    # Convert to DataFrame
+    df = results_to_dataframe(results)
+    
+    print("Available experiment parameters:")
+    print(f"World sizes: {sorted(df['world_size'].unique())}")
+    print(f"Learning rates: {sorted(df['learning_rate'].unique())}")
+    print(f"Enable swapping: {sorted(df['enable_swapping'].unique())}")
+    print(f"Rounds: {sorted(df['rounds'].unique())}")
+    print(f"Seeds: {sorted(df['seed'].unique())}")
+    
+    print("\nEnter comma-separated values for each parameter you want to filter by.")
+    print("Press Enter to include all values for that parameter.")
+    
+    # Get user input
+    world_sizes_input = input("World sizes (e.g., 2,4,8): ").strip()
+    world_sizes = [int(x.strip()) for x in world_sizes_input.split(',')] if world_sizes_input else None
+    
+    learning_rates_input = input("Learning rates (e.g., 0.0001,0.001): ").strip()
+    learning_rates = [float(x.strip()) for x in learning_rates_input.split(',')] if learning_rates_input else None
+    
+    swapping_input = input("Enable swapping (True,False): ").strip()
+    enable_swapping = None
+    if swapping_input:
+        enable_swapping = [x.strip().lower() == 'true' for x in swapping_input.split(',')]
+    
+    rounds_input = input("Rounds (e.g., 10,20): ").strip()
+    rounds_list = [int(x.strip()) for x in rounds_input.split(',')] if rounds_input else None
+    
+    seeds_input = input("Seeds (e.g., 42,123): ").strip()
+    seeds = [int(x.strip()) for x in seeds_input.split(',')] if seeds_input else None
+    
+    plot_title = input("Plot title (or press Enter for default): ").strip()
+    if not plot_title:
+        plot_title = "Learning Curves for Selected Experiments"
+    
+    # Plot the selected experiments
+    plot_specific_experiments(df, world_sizes, learning_rates, enable_swapping, 
+                            rounds_list, seeds, save_plots=True, plot_title=plot_title)
+
 def main():
     """Main function for the analysis script."""
     import argparse
@@ -198,6 +394,8 @@ def main():
                        help='Path to the results pickle file')
     parser.add_argument('--no-plots', action='store_true', 
                        help='Skip generating plots')
+    parser.add_argument('--plot-specific', action='store_true',
+                       help='Interactively select specific experiments to plot')
     
     args = parser.parse_args()
     
@@ -208,7 +406,10 @@ def main():
     
     results_file = args.results_file
     
-    if args.no_plots:
+    if args.plot_specific:
+        # Interactive plotting mode
+        plot_experiments_interactive()
+    elif args.no_plots:
         # Just load and print statistics
         results = load_experiment_results(results_file)
         if results:
@@ -216,10 +417,46 @@ def main():
             print_best_configurations(df)
             final_stats = analyze_final_results(df)
             print("\nFinal Results Statistics:")
-            print(final_stats)
+            # Set pandas display options to show full table
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None, 'display.max_colwidth', None):
+                print(final_stats)
     else:
         # Generate full report
         generate_summary_report(results_file)
 
+
+    # PLOT SPECIFIC PLOTS
+    df = results_to_dataframe(results)
+    plot_specific_experiments(df, world_sizes=[2], learning_rates=[0.0001], enable_swapping=[False], seeds=[42])
+
+# Example usage functions
+def plot_by_world_size(world_sizes: List[int], results_file: str = "experiment_results.pkl"):
+    """Plot learning curves comparing different world sizes."""
+    results = load_experiment_results(results_file)
+    if not results:
+        return
+    df = results_to_dataframe(results)
+    plot_specific_experiments(df, world_sizes=world_sizes, 
+                            plot_title=f"Learning Curves: World Sizes {world_sizes}")
+
+def plot_by_learning_rate(learning_rates: List[float], results_file: str = "experiment_results.pkl"):
+    """Plot learning curves comparing different learning rates."""
+    results = load_experiment_results(results_file)
+    if not results:
+        return
+    df = results_to_dataframe(results)
+    plot_specific_experiments(df, learning_rates=learning_rates,
+                            plot_title=f"Learning Curves: Learning Rates {learning_rates}")
+
+def plot_swapping_comparison(world_sizes: List[int] = None, results_file: str = "experiment_results.pkl"):
+    """Plot learning curves comparing with and without swapping."""
+    results = load_experiment_results(results_file)
+    if not results:
+        return
+    df = results_to_dataframe(results)
+    plot_specific_experiments(df, world_sizes=world_sizes, enable_swapping=[True, False],
+                            plot_title="Learning Curves: Swapping vs No Swapping")
+
 if __name__ == "__main__":
     main()
+

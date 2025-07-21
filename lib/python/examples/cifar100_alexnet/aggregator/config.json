@@ -50,6 +50,7 @@
     "world_size": 1,
     "seed": 123,
     "enable_swapping": false,
+    "enable_layerwise_swapping": true,
     "learningRate": 1e-05
   },
   "baseModel": {

@@ -128,12 +128,13 @@ class Cifar100AlexNetAggregator(TopAggregator):
         self.all_available = False
         self.con_time = 0
         self.enable_swapping = self.config.hyperparameters.enable_swapping
+        self.enable_layerwise_swapping = self.config.hyperparameters.enable_layerwise_swapping 
         self.lr = self.config.hyperparameters.learning_rate
         self.rounds = self.config.hyperparameters.rounds
         
         # Initialize experiment results tracking
         self.experiment_results = []
-        self.experiment_key = (self.world_size, self.lr, self.enable_swapping, self.rounds, seed)
+        self.experiment_key = (self.world_size, self.lr, self.enable_swapping, self.enable_layerwise_swapping, self.rounds, seed)
     
     def _save_experiment_results(self):
         """Save experiment results to a pickle file."""
@@ -162,6 +163,31 @@ class Cifar100AlexNetAggregator(TopAggregator):
             logger.info(f"Saved experiment results to {results_file}")
         except Exception as e:
             logger.error(f"Could not save experiment results: {e}")
+
+    def _save_model_checkpoint(self, test_loss, test_accuracy):
+        """Save model checkpoint with metadata."""
+        try:
+            checkpoint = {
+                'model_state_dict': self.model.state_dict(),
+                'model_weights': self.weights,
+                'round': self._round,
+                'test_loss': test_loss,
+                'test_accuracy': test_accuracy,
+                'world_size': self.world_size,
+                'learning_rate': self.lr,
+                'enable_swapping': self.enable_swapping,
+                'experiment_key': self.experiment_key,
+                'concatenation_time': self.con_time
+            }
+            
+            # Create checkpoint filename with experiment parameters
+            checkpoint_filename = f"model_checkpoint_ws{self.world_size}_lr{self.lr}_swap{self.enable_swapping}_r{self._rounds}.pth"
+            
+            torch.save(checkpoint, checkpoint_filename)
+            logger.info(f"Saved model checkpoint to {checkpoint_filename}")
+            
+        except Exception as e:
+            logger.error(f"Could not save model checkpoint: {e}")
 
     def initialize(self):
         self.device = torch.device(
@@ -247,9 +273,10 @@ class Cifar100AlexNetAggregator(TopAggregator):
             'test-accuracy': test_accuracy
         })
         
-        # Save experiment results if this is the final round
+        # Save experiment results and model checkpoint if this is the final round
         if self._round == self._rounds:
             self._save_experiment_results()
+            # self._save_model_checkpoint(test_loss, test_accuracy)
 
     def _aggregate_weights(self, tag: str) -> None:
         channel = self.cm.get_by_tag(tag)
@@ -358,7 +385,13 @@ class Cifar100AlexNetAggregator(TopAggregator):
 
             logger.debug(f"sending weights to {end}")
             
-            temp = self._slice_weights(self.weights, self.trainer_rank[end], self.world_size)
+            # Apply layerwise swapping for specific layers if enabled
+            if self.enable_layerwise_swapping:
+                effective_rank = self._get_effective_rank(self.trainer_rank[end])
+                temp = self._slice_weights(self.weights, self.trainer_rank[end], self.world_size, effective_rank)
+            else:
+                temp = self._slice_weights(self.weights, self.trainer_rank[end], self.world_size)
+            
             channel.send(
                 end,
                 {
@@ -374,8 +407,11 @@ class Cifar100AlexNetAggregator(TopAggregator):
                 end, PROP_ROUND_START_TIME, (round, datetime.now())
             )
 
-    def _slice_weights(self, state_dict, rank, world_size):
-        """Slice weights for distributed training with 1D tensor parallelism."""
+    def _slice_weights(self, state_dict, rank, world_size, effective_rank=None):
+        """Slice weights for distributed training with 1D tensor parallelism and optional layerwise swapping."""
+        if effective_rank is None:
+            effective_rank = {}
+        
         sliced = {}
         for name, full_tensor in state_dict.items():
             if name == "conv1.weight":
@@ -387,9 +423,10 @@ class Cifar100AlexNetAggregator(TopAggregator):
                 slice_size = 96 // world_size
                 sliced[name] = full_tensor[rank * slice_size:(rank + 1) * slice_size]
             elif name == "conv2.weight":
-                # Split by input channels
+                # Split by input channels - use effective rank for layerwise swapping if enabled
+                effective_r = effective_rank.get('conv2', rank)
                 in_slice_size = 96 // world_size
-                sliced[name] = full_tensor[:, rank * in_slice_size:(rank + 1) * in_slice_size]
+                sliced[name] = full_tensor[:, effective_r * in_slice_size:(effective_r + 1) * in_slice_size]
             elif name == "conv2.bias":
                 # Same for all trainers (input channel split)
                 sliced[name] = full_tensor
@@ -402,9 +439,10 @@ class Cifar100AlexNetAggregator(TopAggregator):
                 slice_size = 384 // world_size
                 sliced[name] = full_tensor[rank * slice_size:(rank + 1) * slice_size]
             elif name == "conv4.weight":
-                # Split by input channels
+                # Split by input channels - use effective rank for layerwise swapping if enabled
+                effective_r = effective_rank.get('conv4', rank)
                 in_slice_size = 384 // world_size
-                sliced[name] = full_tensor[:, rank * in_slice_size:(rank + 1) * in_slice_size]
+                sliced[name] = full_tensor[:, effective_r * in_slice_size:(effective_r + 1) * in_slice_size]
             elif name == "conv4.bias":
                 # Same for all trainers (input channel split)
                 sliced[name] = full_tensor
@@ -417,9 +455,10 @@ class Cifar100AlexNetAggregator(TopAggregator):
                 slice_size = 256 // world_size
                 sliced[name] = full_tensor[rank * slice_size:(rank + 1) * slice_size]
             elif name == "conv6.weight":
-                # Split by input channels
+                # Split by input channels - use effective rank for layerwise swapping if enabled
+                effective_r = effective_rank.get('conv6', rank)
                 in_slice_size = 256 // world_size
-                sliced[name] = full_tensor[:, rank * in_slice_size:(rank + 1) * in_slice_size]
+                sliced[name] = full_tensor[:, effective_r * in_slice_size:(effective_r + 1) * in_slice_size]
             elif name == "conv6.bias":
                 # Same for all trainers (input channel split)
                 sliced[name] = full_tensor
@@ -432,9 +471,10 @@ class Cifar100AlexNetAggregator(TopAggregator):
                 out_slice_size = 4096 // world_size
                 sliced[name] = full_tensor[rank * out_slice_size:(rank + 1) * out_slice_size]
             elif name == "fc2.weight":
-                # Split by input dimension
+                # Split by input dimension - use effective rank for layerwise swapping if enabled
+                effective_r = effective_rank.get('fc2', rank)
                 in_slice_size = 4096 // world_size
-                sliced[name] = full_tensor[:, rank * in_slice_size:(rank + 1) * in_slice_size]
+                sliced[name] = full_tensor[:, effective_r * in_slice_size:(effective_r + 1) * in_slice_size]
             elif name == "fc2.bias":
                 # Same for all trainers (input dimension split)
                 sliced[name] = full_tensor
@@ -447,9 +487,10 @@ class Cifar100AlexNetAggregator(TopAggregator):
                 out_slice_size = 4096 // world_size
                 sliced[name] = full_tensor[rank * out_slice_size:(rank + 1) * out_slice_size]
             elif name == "fc4.weight":
-                # Split by input dimension
+                # Split by input dimension - use effective rank for layerwise swapping if enabled
+                effective_r = effective_rank.get('fc4', rank)
                 in_slice_size = 4096 // world_size
-                sliced[name] = full_tensor[:, rank * in_slice_size:(rank + 1) * in_slice_size]
+                sliced[name] = full_tensor[:, effective_r * in_slice_size:(effective_r + 1) * in_slice_size]
             elif name == "fc4.bias":
                 # Same for all trainers (input dimension split) - final 100 classes
                 sliced[name] = full_tensor
@@ -520,6 +561,25 @@ class Cifar100AlexNetAggregator(TopAggregator):
         concated['fc4.bias'] = torch.mean(torch.stack(weights), dim=0)
         
         return concated
+
+    def _get_effective_rank(self, trainer_rank):
+        """Get effective rank for layerwise swapping of specific layers."""
+        if not self.enable_layerwise_swapping:
+            return {}
+        
+        # Layers to apply layerwise swapping: conv2, conv4, conv6, fc2, fc4
+        swappable_layers = ['conv2', 'conv4', 'conv6', 'fc2', 'fc4']
+        
+        effective_rank = {}
+        for layer_name in swappable_layers:
+            # Apply swapping every round (not just even rounds)
+            if self._round > 0:
+                # Shift rank by 1 for swappable layers
+                effective_rank[layer_name] = (trainer_rank + self._round) % self.world_size
+            else:
+                effective_rank[layer_name] = trainer_rank
+        
+        return effective_rank
 
 
 if __name__ == "__main__":
