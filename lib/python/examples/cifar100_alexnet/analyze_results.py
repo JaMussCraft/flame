@@ -60,8 +60,10 @@ def results_to_dataframe(results_dict: Dict) -> pd.DataFrame:
     rows = []
     
     for key, experiment_results in results_dict.items():
-        # world_size, learning_rate, enable_swapping, enable_layerwise_swapping, rounds, seed = key
-        world_size, learning_rate, enable_swapping, rounds, seed = key
+        if len(key) == 6:
+            world_size, learning_rate, enable_swapping, enable_layerwise_swapping, rounds, seed = key
+        else:
+            world_size, learning_rate, enable_swapping, rounds, seed = key
         
         for round_num, test_loss, test_accuracy in experiment_results:
             rows.append({
