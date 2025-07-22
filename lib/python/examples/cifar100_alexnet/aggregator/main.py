@@ -195,6 +195,10 @@ class Cifar100AlexNetAggregator(TopAggregator):
 
         self.model = AlexNet().to(self.device)
 
+        # Load pretrained weights (pretrained on CIFAR100)
+        self.model.load_state_dict(torch.load('/home/cc/cc_my_mounting_point/james-imagenet/checkpoint_pretrain_cifar100_lr0.0001_r10.pth')["model_state_dict"])   
+        logger.info("Loaded pretrained weights!")
+
         # Evaluate baseline before
         self.evaluate(baseline=True)
 

@@ -34,16 +34,11 @@ class ExperimentRunner:
         self.results_dict = {}
         
         # Experiment configuration lists
-        self.world_sizes = [2]
-        self.learning_rates = [0.0001]
-        self.swap_configs = [False]
+        self.world_sizes = [1,2,4,8]
+        self.learning_rates = [0.00001, 0.0001, 0.001]
+        self.swap_configs = [False, True]
         self.rounds = [10]
-        self.seeds = [42]
-        # self.world_sizes = [1,2,4,8]
-        # self.learning_rates = [0.00001, 0.0001, 0.001]
-        # self.swap_configs = [False, True]
-        # self.rounds = [10]
-        # self.seeds = [123,42,77]
+        self.seeds = [123,42,77]
         
         # Load existing results if available
         self._load_existing_results()

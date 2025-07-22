@@ -1,0 +1,990 @@
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.7474503517150879
+Test loss: 33.15008242909484
+Test accuracy: 516/10000 (0.0516)
+
+Round: 2
+Concatenation Time: 0.8816428184509277
+Test loss: 218.22276414718627
+Test accuracy: 100/10000 (0.01)
+
+Round: 3
+Concatenation Time: 0.8735580444335938
+Test loss: 334.7426365143776
+Test accuracy: 100/10000 (0.01)
+
+Round: 4
+Concatenation Time: 0.8718669414520264
+Test loss: 447.24011552380483
+Test accuracy: 1371/10000 (0.1371)
+
+Round: 5
+Concatenation Time: 0.8706858158111572
+Test loss: 659.8737961660512
+Test accuracy: 673/10000 (0.0673)
+
+Round: 6
+Concatenation Time: 0.8746469020843506
+Test loss: 969.3753904037923
+Test accuracy: 309/10000 (0.0309)
+
+Round: 7
+Concatenation Time: 0.7944259643554688
+Test loss: 842.8564384329925
+Test accuracy: 435/10000 (0.0435)
+
+Round: 8
+Concatenation Time: 0.8812239170074463
+Test loss: 647.681555625137
+Test accuracy: 1690/10000 (0.169)
+
+Round: 9
+Concatenation Time: 0.8655292987823486
+Test loss: 707.6041062560258
+Test accuracy: 1325/10000 (0.1325)
+
+Round: 10
+Concatenation Time: 0.8711020946502686
+Test loss: 774.3212040881681
+Test accuracy: 907/10000 (0.0907)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8771877288818359
+Test loss: 28.306048287535152
+Test accuracy: 503/10000 (0.0503)
+
+Round: 2
+Concatenation Time: 0.8893847465515137
+Test loss: 164.81680588135583
+Test accuracy: 144/10000 (0.0144)
+
+Round: 3
+Concatenation Time: 0.8660342693328857
+Test loss: 315.5105635409428
+Test accuracy: 204/10000 (0.0204)
+
+Round: 4
+Concatenation Time: 0.8666696548461914
+Test loss: 546.1200028220502
+Test accuracy: 1026/10000 (0.1026)
+
+Round: 5
+Concatenation Time: 0.8715043067932129
+Test loss: 966.7068989147647
+Test accuracy: 361/10000 (0.0361)
+
+Round: 6
+Concatenation Time: 0.8618555068969727
+Test loss: 1082.540171665073
+Test accuracy: 322/10000 (0.0322)
+
+Round: 7
+Concatenation Time: 0.8801233768463135
+Test loss: 1016.8758933529252
+Test accuracy: 212/10000 (0.0212)
+
+Round: 8
+Concatenation Time: 0.8570137023925781
+Test loss: 702.3828177872756
+Test accuracy: 1500/10000 (0.15)
+
+Round: 9
+Concatenation Time: 0.8690388202667236
+Test loss: 1027.2273778714327
+Test accuracy: 843/10000 (0.0843)
+
+Round: 10
+Concatenation Time: 0.8816366195678711
+Test loss: 1074.6920667466666
+Test accuracy: 815/10000 (0.0815)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8715007305145264
+Test loss: 25.236707835665364
+Test accuracy: 626/10000 (0.0626)
+
+Round: 2
+Concatenation Time: 0.8784317970275879
+Test loss: 254.11438471679688
+Test accuracy: 100/10000 (0.01)
+
+Round: 3
+Concatenation Time: 0.8697857856750488
+Test loss: 378.6917287017584
+Test accuracy: 100/10000 (0.01)
+
+Round: 4
+Concatenation Time: 0.8632848262786865
+Test loss: 528.4463861305037
+Test accuracy: 1052/10000 (0.1052)
+
+Round: 5
+Concatenation Time: 0.8772604465484619
+Test loss: 787.6852576281577
+Test accuracy: 552/10000 (0.0552)
+
+Round: 6
+Concatenation Time: 0.8659648895263672
+Test loss: 980.1780431941202
+Test accuracy: 314/10000 (0.0314)
+
+Round: 7
+Concatenation Time: 0.8621606826782227
+Test loss: 1071.6068312934458
+Test accuracy: 218/10000 (0.0218)
+
+Round: 8
+Concatenation Time: 0.8631536960601807
+Test loss: 675.7188064199447
+Test accuracy: 1528/10000 (0.1528)
+
+Round: 9
+Concatenation Time: 0.8689088821411133
+Test loss: 894.978607197686
+Test accuracy: 856/10000 (0.0856)
+
+Round: 10
+Concatenation Time: 0.8684725761413574
+Test loss: 1061.1770436851023
+Test accuracy: 492/10000 (0.0492)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8739173412322998
+Test loss: 39.389195133528546
+Test accuracy: 420/10000 (0.042)
+
+Round: 2
+Concatenation Time: 0.868018627166748
+Test loss: 190.79559587400476
+Test accuracy: 116/10000 (0.0116)
+
+Round: 3
+Concatenation Time: 0.87058424949646
+Test loss: 282.4722226424514
+Test accuracy: 183/10000 (0.0183)
+
+Round: 4
+Concatenation Time: 0.8617503643035889
+Test loss: 555.9316711093825
+Test accuracy: 1106/10000 (0.1106)
+
+Round: 5
+Concatenation Time: 0.8583383560180664
+Test loss: 793.2469564633927
+Test accuracy: 427/10000 (0.0427)
+
+Round: 6
+Concatenation Time: 0.8688135147094727
+Test loss: 991.842669826643
+Test accuracy: 251/10000 (0.0251)
+
+Round: 7
+Concatenation Time: 0.8822321891784668
+Test loss: 1056.5118535219067
+Test accuracy: 227/10000 (0.0227)
+
+Round: 8
+Concatenation Time: 0.8697099685668945
+Test loss: 701.7457367593966
+Test accuracy: 1557/10000 (0.1557)
+
+Round: 9
+Concatenation Time: 0.863745927810669
+Test loss: 886.7519785280787
+Test accuracy: 1118/10000 (0.1118)
+
+Round: 10
+Concatenation Time: 0.864875078201294
+Test loss: 1021.2304761309266
+Test accuracy: 799/10000 (0.0799)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.7442030906677246
+Test loss: 35.82437385206814
+Test accuracy: 513/10000 (0.0513)
+
+Round: 2
+Concatenation Time: 0.7990241050720215
+Test loss: 183.4712019704908
+Test accuracy: 183/10000 (0.0183)
+
+Round: 3
+Concatenation Time: 0.8689703941345215
+Test loss: 288.5715116254138
+Test accuracy: 163/10000 (0.0163)
+
+Round: 4
+Concatenation Time: 0.8850805759429932
+Test loss: 471.33389663062223
+Test accuracy: 1422/10000 (0.1422)
+
+Round: 5
+Concatenation Time: 0.8673017024993896
+Test loss: 657.9753959864755
+Test accuracy: 760/10000 (0.076)
+
+Round: 6
+Concatenation Time: 0.868260383605957
+Test loss: 938.5617396597273
+Test accuracy: 432/10000 (0.0432)
+
+Round: 7
+Concatenation Time: 0.8760507106781006
+Test loss: 863.2568170447964
+Test accuracy: 338/10000 (0.0338)
+
+Round: 8
+Concatenation Time: 0.8605895042419434
+Test loss: 735.3828747913012
+Test accuracy: 1516/10000 (0.1516)
+
+Round: 9
+Concatenation Time: 0.8686320781707764
+Test loss: 837.7756671812726
+Test accuracy: 1182/10000 (0.1182)
+
+Round: 10
+Concatenation Time: 0.7910037040710449
+Test loss: 713.901074420306
+Test accuracy: 1174/10000 (0.1174)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8660106658935547
+Test loss: 43.388904825714064
+Test accuracy: 450/10000 (0.045)
+
+Round: 2
+Concatenation Time: 0.8687589168548584
+Test loss: 250.39054460754394
+Test accuracy: 100/10000 (0.01)
+
+Round: 3
+Concatenation Time: 0.8794152736663818
+Test loss: 511.00289958801267
+Test accuracy: 100/10000 (0.01)
+
+Round: 4
+Concatenation Time: 0.8642001152038574
+Test loss: 497.3955932590805
+Test accuracy: 1275/10000 (0.1275)
+
+Round: 5
+Concatenation Time: 0.8771123886108398
+Test loss: 728.4126843115548
+Test accuracy: 574/10000 (0.0574)
+
+Round: 6
+Concatenation Time: 0.869234561920166
+Test loss: 887.5558062675245
+Test accuracy: 345/10000 (0.0345)
+
+Round: 7
+Concatenation Time: 0.870276689529419
+Test loss: 927.6353535251957
+Test accuracy: 381/10000 (0.0381)
+
+Round: 8
+Concatenation Time: 0.8706874847412109
+Test loss: 813.3690025506949
+Test accuracy: 1347/10000 (0.1347)
+
+Round: 9
+Concatenation Time: 0.8607518672943115
+Test loss: 1068.74770696112
+Test accuracy: 707/10000 (0.0707)
+
+Round: 10
+Concatenation Time: 0.8559207916259766
+Test loss: 1227.7819979148685
+Test accuracy: 485/10000 (0.0485)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.887192964553833
+Test loss: 16.165910695182973
+Test accuracy: 420/10000 (0.042)
+
+Round: 2
+Concatenation Time: 0.881547212600708
+Test loss: 19.151248768544466
+Test accuracy: 151/10000 (0.0151)
+
+Round: 3
+Concatenation Time: 0.8985557556152344
+Test loss: 17.741655764468067
+Test accuracy: 115/10000 (0.0115)
+
+Round: 4
+Concatenation Time: 0.8818058967590332
+Test loss: 122.18260795883266
+Test accuracy: 361/10000 (0.0361)
+
+Round: 5
+Concatenation Time: 0.877239465713501
+Test loss: 65.23918960426312
+Test accuracy: 459/10000 (0.0459)
+
+Round: 6
+Concatenation Time: 0.8871526718139648
+Test loss: 64.58155911315285
+Test accuracy: 255/10000 (0.0255)
+
+Round: 7
+Concatenation Time: 0.8940918445587158
+Test loss: 66.97154900694099
+Test accuracy: 167/10000 (0.0167)
+
+Round: 8
+Concatenation Time: 0.8822686672210693
+Test loss: 73.53150619674108
+Test accuracy: 576/10000 (0.0576)
+
+Round: 9
+Concatenation Time: 0.8944017887115479
+Test loss: 81.64566450033443
+Test accuracy: 382/10000 (0.0382)
+
+Round: 10
+Concatenation Time: 0.8798818588256836
+Test loss: 93.2425576612883
+Test accuracy: 245/10000 (0.0245)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8838596343994141
+Test loss: 16.496382993791645
+Test accuracy: 244/10000 (0.0244)
+
+Round: 2
+Concatenation Time: 0.8809397220611572
+Test loss: 23.09156039354517
+Test accuracy: 154/10000 (0.0154)
+
+Round: 3
+Concatenation Time: 0.7949848175048828
+Test loss: 23.336723668150345
+Test accuracy: 105/10000 (0.0105)
+
+Round: 4
+Concatenation Time: 0.8829452991485596
+Test loss: 143.09278294063637
+Test accuracy: 457/10000 (0.0457)
+
+Round: 5
+Concatenation Time: 0.8726272583007812
+Test loss: 93.56399703909334
+Test accuracy: 264/10000 (0.0264)
+
+Round: 6
+Concatenation Time: 0.8747396469116211
+Test loss: 64.01003269998198
+Test accuracy: 202/10000 (0.0202)
+
+Round: 7
+Concatenation Time: 0.8666653633117676
+Test loss: 82.40941119882521
+Test accuracy: 101/10000 (0.0101)
+
+Round: 8
+Concatenation Time: 0.8810064792633057
+Test loss: 115.68633901661711
+Test accuracy: 481/10000 (0.0481)
+
+Round: 9
+Concatenation Time: 0.8730411529541016
+Test loss: 152.96668172907587
+Test accuracy: 220/10000 (0.022)
+
+Round: 10
+Concatenation Time: 0.867041826248169
+Test loss: 130.95408038888485
+Test accuracy: 110/10000 (0.011)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8769466876983643
+Test loss: 11.405977393490023
+Test accuracy: 149/10000 (0.0149)
+
+Round: 2
+Concatenation Time: 0.880615234375
+Test loss: 10.641987465186045
+Test accuracy: 132/10000 (0.0132)
+
+Round: 3
+Concatenation Time: 0.8710849285125732
+Test loss: 16.053015610083083
+Test accuracy: 100/10000 (0.01)
+
+Round: 4
+Concatenation Time: 0.8676052093505859
+Test loss: 109.647105514029
+Test accuracy: 554/10000 (0.0554)
+
+Round: 5
+Concatenation Time: 0.9132940769195557
+Test loss: 39.8978360090416
+Test accuracy: 539/10000 (0.0539)
+
+Round: 6
+Concatenation Time: 0.8732030391693115
+Test loss: 38.596322096032964
+Test accuracy: 229/10000 (0.0229)
+
+Round: 7
+Concatenation Time: 0.8771398067474365
+Test loss: 68.98418185063268
+Test accuracy: 106/10000 (0.0106)
+
+Round: 8
+Concatenation Time: 0.8711366653442383
+Test loss: 75.38322797601901
+Test accuracy: 694/10000 (0.0694)
+
+Round: 9
+Concatenation Time: 0.7620277404785156
+Test loss: 70.53674518432342
+Test accuracy: 214/10000 (0.0214)
+
+Round: 10
+Concatenation Time: 0.8820996284484863
+Test loss: 48.68452472830384
+Test accuracy: 190/10000 (0.019)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.876814603805542
+Test loss: 8.104406579464081
+Test accuracy: 385/10000 (0.0385)
+
+Round: 2
+Concatenation Time: 0.872138261795044
+Test loss: 16.08310836928768
+Test accuracy: 149/10000 (0.0149)
+
+Round: 3
+Concatenation Time: 0.864811897277832
+Test loss: 17.001780995369128
+Test accuracy: 112/10000 (0.0112)
+
+Round: 4
+Concatenation Time: 0.8730249404907227
+Test loss: 122.3681776584707
+Test accuracy: 485/10000 (0.0485)
+
+Round: 5
+Concatenation Time: 0.8678474426269531
+Test loss: 149.97481882920323
+Test accuracy: 141/10000 (0.0141)
+
+Round: 6
+Concatenation Time: 0.8625357151031494
+Test loss: 85.33259784892587
+Test accuracy: 125/10000 (0.0125)
+
+Round: 7
+Concatenation Time: 0.861154317855835
+Test loss: 58.17422762714189
+Test accuracy: 103/10000 (0.0103)
+
+Round: 8
+Concatenation Time: 0.8719613552093506
+Test loss: 77.06028647907796
+Test accuracy: 568/10000 (0.0568)
+
+Round: 9
+Concatenation Time: 0.8624677658081055
+Test loss: 122.7632214484876
+Test accuracy: 158/10000 (0.0158)
+
+Round: 10
+Concatenation Time: 0.864617109298706
+Test loss: 100.94100368008645
+Test accuracy: 268/10000 (0.0268)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8842732906341553
+Test loss: 21.319921035146308
+Test accuracy: 236/10000 (0.0236)
+
+Round: 2
+Concatenation Time: 0.8897190093994141
+Test loss: 30.671629004812466
+Test accuracy: 116/10000 (0.0116)
+
+Round: 3
+Concatenation Time: 0.8924643993377686
+Test loss: 36.30829084971005
+Test accuracy: 102/10000 (0.0102)
+
+Round: 4
+Concatenation Time: 0.8826601505279541
+Test loss: 106.3276819377761
+Test accuracy: 456/10000 (0.0456)
+
+Round: 5
+Concatenation Time: 0.8879315853118896
+Test loss: 76.64650355189063
+Test accuracy: 131/10000 (0.0131)
+
+Round: 6
+Concatenation Time: 0.879767894744873
+Test loss: 51.28058481903295
+Test accuracy: 372/10000 (0.0372)
+
+Round: 7
+Concatenation Time: 0.8727626800537109
+Test loss: 43.3738744775031
+Test accuracy: 161/10000 (0.0161)
+
+Round: 8
+Concatenation Time: 0.8747107982635498
+Test loss: 74.55826647954
+Test accuracy: 546/10000 (0.0546)
+
+Round: 9
+Concatenation Time: 0.8876965045928955
+Test loss: 93.59418882548698
+Test accuracy: 283/10000 (0.0283)
+
+Round: 10
+Concatenation Time: 0.8784887790679932
+Test loss: 107.33375125386743
+Test accuracy: 298/10000 (0.0298)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8861603736877441
+Test loss: 12.422328777362482
+Test accuracy: 325/10000 (0.0325)
+
+Round: 2
+Concatenation Time: 0.8777141571044922
+Test loss: 14.377041213540016
+Test accuracy: 158/10000 (0.0158)
+
+Round: 3
+Concatenation Time: 0.8768002986907959
+Test loss: 24.755427517549666
+Test accuracy: 103/10000 (0.0103)
+
+Round: 4
+Concatenation Time: 0.8773064613342285
+Test loss: 43.418126179240005
+Test accuracy: 946/10000 (0.0946)
+
+Round: 5
+Concatenation Time: 0.8754377365112305
+Test loss: 36.658330149198676
+Test accuracy: 313/10000 (0.0313)
+
+Round: 6
+Concatenation Time: 0.8761210441589355
+Test loss: 25.205418901842926
+Test accuracy: 279/10000 (0.0279)
+
+Round: 7
+Concatenation Time: 0.8730373382568359
+Test loss: 16.234359349145624
+Test accuracy: 242/10000 (0.0242)
+
+Round: 8
+Concatenation Time: 0.8872241973876953
+Test loss: 46.576616157019814
+Test accuracy: 774/10000 (0.0774)
+
+Round: 9
+Concatenation Time: 0.8665597438812256
+Test loss: 35.581071081280996
+Test accuracy: 556/10000 (0.0556)
+
+Round: 10
+Concatenation Time: 0.878227710723877
+Test loss: 42.85746288372261
+Test accuracy: 337/10000 (0.0337)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8894760608673096
+Test loss: 4.718023511481285
+Test accuracy: 121/10000 (0.0121)
+
+Round: 2
+Concatenation Time: 0.8780612945556641
+Test loss: 4.983672849661112
+Test accuracy: 112/10000 (0.0112)
+
+Round: 3
+Concatenation Time: 0.8875353336334229
+Test loss: 21.83843318631893
+Test accuracy: 96/10000 (0.0096)
+
+Round: 4
+Concatenation Time: 0.8749270439147949
+Test loss: 6.376829820752143
+Test accuracy: 106/10000 (0.0106)
+
+Round: 5
+Concatenation Time: 0.8756105899810791
+Test loss: 5.4066952451944355
+Test accuracy: 121/10000 (0.0121)
+
+Round: 6
+Concatenation Time: 0.8706881999969482
+Test loss: 123.97976532438507
+Test accuracy: 100/10000 (0.01)
+
+Round: 7
+Concatenation Time: 0.8861827850341797
+Test loss: 413.82483333714305
+Test accuracy: 111/10000 (0.0111)
+
+Round: 8
+Concatenation Time: 0.8818557262420654
+Test loss: 6.381886790943145
+Test accuracy: 101/10000 (0.0101)
+
+Round: 9
+Concatenation Time: 0.7463438510894775
+Test loss: 6.913746363560111
+Test accuracy: 116/10000 (0.0116)
+
+Round: 10
+Concatenation Time: 0.7511608600616455
+Test loss: 149.7010781716533
+Test accuracy: 119/10000 (0.0119)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8818700313568115
+Test loss: 4.686574728274345
+Test accuracy: 84/10000 (0.0084)
+
+Round: 2
+Concatenation Time: 0.873011589050293
+Test loss: 4.859420130905509
+Test accuracy: 213/10000 (0.0213)
+
+Round: 3
+Concatenation Time: 0.8745379447937012
+Test loss: 186.68239254835925
+Test accuracy: 100/10000 (0.01)
+
+Round: 4
+Concatenation Time: 0.873603343963623
+Test loss: 5.641876005601883
+Test accuracy: 136/10000 (0.0136)
+
+Round: 5
+Concatenation Time: 0.8666326999664307
+Test loss: 4.994299243116378
+Test accuracy: 173/10000 (0.0173)
+
+Round: 6
+Concatenation Time: 0.8630950450897217
+Test loss: 357.4481832199874
+Test accuracy: 93/10000 (0.0093)
+
+Round: 7
+Concatenation Time: 0.867579460144043
+Test loss: 1397.879100707817
+Test accuracy: 100/10000 (0.01)
+
+Round: 8
+Concatenation Time: 0.8653862476348877
+Test loss: 7.0243243128061295
+Test accuracy: 109/10000 (0.0109)
+
+Round: 9
+Concatenation Time: 0.8532817363739014
+Test loss: 8.943068297934412
+Test accuracy: 116/10000 (0.0116)
+
+Round: 10
+Concatenation Time: 0.8609814643859863
+Test loss: 590.7888541438102
+Test accuracy: 100/10000 (0.01)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8678703308105469
+Test loss: 4.551296611905098
+Test accuracy: 115/10000 (0.0115)
+
+Round: 2
+Concatenation Time: 0.877861738204956
+Test loss: 4.991430007338524
+Test accuracy: 135/10000 (0.0135)
+
+Round: 3
+Concatenation Time: 0.865786075592041
+Test loss: 91.61964156053796
+Test accuracy: 100/10000 (0.01)
+
+Round: 4
+Concatenation Time: 0.8754546642303467
+Test loss: 6.387147424602508
+Test accuracy: 100/10000 (0.01)
+
+Round: 5
+Concatenation Time: 0.859865665435791
+Test loss: 5.326145717275143
+Test accuracy: 111/10000 (0.0111)
+
+Round: 6
+Concatenation Time: 0.8645269870758057
+Test loss: 31.129008088957473
+Test accuracy: 107/10000 (0.0107)
+
+Round: 7
+Concatenation Time: 0.872126579284668
+Test loss: 233.1864816025468
+Test accuracy: 100/10000 (0.01)
+
+Round: 8
+Concatenation Time: 0.8561980724334717
+Test loss: 6.537410733294487
+Test accuracy: 110/10000 (0.011)
+
+Round: 9
+Concatenation Time: 0.8556370735168457
+Test loss: 13.627773637268971
+Test accuracy: 109/10000 (0.0109)
+
+Round: 10
+Concatenation Time: 0.849755048751831
+Test loss: 67.66694670683923
+Test accuracy: 108/10000 (0.0108)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8761374950408936
+Test loss: 4.562443078517914
+Test accuracy: 142/10000 (0.0142)
+
+Round: 2
+Concatenation Time: 0.8673522472381592
+Test loss: 6.151580715702288
+Test accuracy: 119/10000 (0.0119)
+
+Round: 3
+Concatenation Time: 0.8655579090118408
+Test loss: 40.98294949015309
+Test accuracy: 98/10000 (0.0098)
+
+Round: 4
+Concatenation Time: 0.78401780128479
+Test loss: 6.2890668073892595
+Test accuracy: 100/10000 (0.01)
+
+Round: 5
+Concatenation Time: 0.8611574172973633
+Test loss: 5.187474887490272
+Test accuracy: 110/10000 (0.011)
+
+Round: 6
+Concatenation Time: 0.7841663360595703
+Test loss: 61.13565770845499
+Test accuracy: 112/10000 (0.0112)
+
+Round: 7
+Concatenation Time: 0.8786168098449707
+Test loss: 155.42350714510573
+Test accuracy: 98/10000 (0.0098)
+
+Round: 8
+Concatenation Time: 0.869903564453125
+Test loss: 6.273161203682423
+Test accuracy: 118/10000 (0.0118)
+
+Round: 9
+Concatenation Time: 0.855294942855835
+Test loss: 5.116881572604179
+Test accuracy: 121/10000 (0.0121)
+
+Round: 10
+Concatenation Time: 0.7346229553222656
+Test loss: 290.5938277685713
+Test accuracy: 97/10000 (0.0097)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8835010528564453
+Test loss: 4.8151456238269805
+Test accuracy: 92/10000 (0.0092)
+
+Round: 2
+Concatenation Time: 0.7982656955718994
+Test loss: 5.241615816044807
+Test accuracy: 177/10000 (0.0177)
+
+Round: 3
+Concatenation Time: 0.8686468601226807
+Test loss: 95.25376698977834
+Test accuracy: 85/10000 (0.0085)
+
+Round: 4
+Concatenation Time: 0.8629186153411865
+Test loss: 6.200559617501497
+Test accuracy: 162/10000 (0.0162)
+
+Round: 5
+Concatenation Time: 0.8589165210723877
+Test loss: 5.0407474558115
+Test accuracy: 122/10000 (0.0122)
+
+Round: 6
+Concatenation Time: 0.8580079078674316
+Test loss: 57.49162790917507
+Test accuracy: 99/10000 (0.0099)
+
+Round: 7
+Concatenation Time: 0.8748536109924316
+Test loss: 706.7086702170373
+Test accuracy: 100/10000 (0.01)
+
+Round: 8
+Concatenation Time: 0.7789616584777832
+Test loss: 7.16019260532856
+Test accuracy: 94/10000 (0.0094)
+
+Round: 9
+Concatenation Time: 0.8590378761291504
+Test loss: 5.642288462379202
+Test accuracy: 127/10000 (0.0127)
+
+Round: 10
+Concatenation Time: 0.8601057529449463
+Test loss: 182.89131538286787
+Test accuracy: 103/10000 (0.0103)
+
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
+Round: 1
+Concatenation Time: 0.8713815212249756
+Test loss: 4.5734520962476735
+Test accuracy: 156/10000 (0.0156)
+
+Round: 2
+Concatenation Time: 0.7494802474975586
+Test loss: 11.301058873748406
+Test accuracy: 116/10000 (0.0116)
+
+Round: 3
+Concatenation Time: 0.8703160285949707
+Test loss: 66.17975725812356
+Test accuracy: 110/10000 (0.011)
+
+Round: 4
+Concatenation Time: 0.8695175647735596
+Test loss: 7.371398175132275
+Test accuracy: 99/10000 (0.0099)
+
+Round: 5
+Concatenation Time: 0.8633389472961426
+Test loss: 4.815181006975472
+Test accuracy: 199/10000 (0.0199)
+
+Round: 6
+Concatenation Time: 0.781944751739502
+Test loss: 37.973762263910544
+Test accuracy: 100/10000 (0.01)
+
+Round: 7
+Concatenation Time: 0.8694493770599365
+Test loss: 771.2008924929723
+Test accuracy: 104/10000 (0.0104)
+
+Round: 8
+Concatenation Time: 0.8704729080200195
+Test loss: 6.819229198002815
+Test accuracy: 101/10000 (0.0101)
+
+Round: 9
+Concatenation Time: 0.7996952533721924
+Test loss: 5.035192696991563
+Test accuracy: 142/10000 (0.0142)
+
+Round: 10
+Concatenation Time: 0.7819187641143799
+Test loss: 753.5569057273453
+Test accuracy: 103/10000 (0.0103)
+

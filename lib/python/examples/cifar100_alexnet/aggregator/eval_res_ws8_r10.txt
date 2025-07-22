@@ -1,0 +1,5 @@
+Round: 0
+Concatenation Time: 0
+Test loss: 1.5429650505585242
+Test accuracy: 6125/10000 (0.6125)
+
