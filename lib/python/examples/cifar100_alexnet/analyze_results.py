@@ -428,8 +428,8 @@ def main():
 
 
     # PLOT SPECIFIC PLOTS
-    df = results_to_dataframe(results)
-    plot_specific_experiments(df, world_sizes=[2], learning_rates=[0.0001], enable_swapping=[False], seeds=[42])
+    # df = results_to_dataframe(results)
+    # plot_specific_experiments(df, world_sizes=[2], learning_rates=[0.0001], enable_swapping=[False], seeds=[42])
 
 # Example usage functions
 def plot_by_world_size(world_sizes: List[int], results_file: str = "experiment_results.pkl"):
