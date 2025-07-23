@@ -482,6 +482,13 @@ class Cifar100ResNet34Aggregator(TopAggregator):
             weights = [w[param] for w in trainers_weights]
             concated[param] = torch.cat(weights, 0)
         
+        # Handle bn1.num_batches_tracked (scalar parameter → average)
+        if 'bn1.num_batches_tracked' in trainers_weights[0]:
+            weights = [w['bn1.num_batches_tracked'] for w in trainers_weights]
+            # Convert to float, compute mean, convert back to long
+            float_weights = [w.float() for w in weights]
+            concated['bn1.num_batches_tracked'] = torch.mean(torch.stack(float_weights), dim=0).long()
+        
         # Handle all BasicBlock layers
         for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
             layer_channels = self._get_layer_channels_by_name(layer_name)
@@ -501,6 +508,14 @@ class Cifar100ResNet34Aggregator(TopAggregator):
                     weights = [w[bn1_key] for w in trainers_weights]
                     concated[bn1_key] = torch.cat(weights, 0)
                 
+                # Handle bn1.num_batches_tracked (scalar parameter → average)
+                bn1_num_batches_key = f"{block_prefix}.bn1.num_batches_tracked"
+                if bn1_num_batches_key in trainers_weights[0]:
+                    weights = [w[bn1_num_batches_key] for w in trainers_weights]
+                    # Convert to float, compute mean, convert back to long
+                    float_weights = [w.float() for w in weights]
+                    concated[bn1_num_batches_key] = torch.mean(torch.stack(float_weights), dim=0).long()
+                
                 # conv2: Split by INPUT → Concatenate along input dimension
                 conv2_key = f"{block_prefix}.conv2.weight"
                 weights = [w[conv2_key] for w in trainers_weights]
@@ -512,6 +527,14 @@ class Cifar100ResNet34Aggregator(TopAggregator):
                     weights = [w[bn2_key] for w in trainers_weights]
                     concated[bn2_key] = torch.mean(torch.stack(weights), dim=0)
                 
+                # Handle bn2.num_batches_tracked (full parameter → average)
+                bn2_num_batches_key = f"{block_prefix}.bn2.num_batches_tracked"
+                if bn2_num_batches_key in trainers_weights[0]:
+                    weights = [w[bn2_num_batches_key] for w in trainers_weights]
+                    # Convert to float, compute mean, convert back to long
+                    float_weights = [w.float() for w in weights]
+                    concated[bn2_num_batches_key] = torch.mean(torch.stack(float_weights), dim=0).long()
+                
                 # shortcut (if exists): Full parameters → Average
                 shortcut_conv_key = f"{block_prefix}.shortcut.0.weight"
                 if shortcut_conv_key in trainers_weights[0]:
@@ -522,6 +545,14 @@ class Cifar100ResNet34Aggregator(TopAggregator):
                         shortcut_bn_key = f"{block_prefix}.shortcut.1.{param}"
                         weights = [w[shortcut_bn_key] for w in trainers_weights]
                         concated[shortcut_bn_key] = torch.mean(torch.stack(weights), dim=0)
+                    
+                    # Handle shortcut bn num_batches_tracked (full parameter → average)
+                    shortcut_bn_num_batches_key = f"{block_prefix}.shortcut.1.num_batches_tracked"
+                    if shortcut_bn_num_batches_key in trainers_weights[0]:
+                        weights = [w[shortcut_bn_num_batches_key] for w in trainers_weights]
+                        # Convert to float, compute mean, convert back to long
+                        float_weights = [w.float() for w in weights]
+                        concated[shortcut_bn_num_batches_key] = torch.mean(torch.stack(float_weights), dim=0).long()
         
         # Final FC: Full parameters → Average
         weights = [w['fc.weight'] for w in trainers_weights]
