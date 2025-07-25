@@ -127,8 +127,8 @@ class WeightOperationsTester:
         errors = []
         
         for name, original_tensor in original_weights.items():
-            if 'num_batches_tracked' in name:
-                continue  # Skip num_batches_tracked parameters
+            # if 'num_batches_tracked' in name:
+            #     continue  # Skip num_batches_tracked parameters
                 
             original_shape = original_tensor.shape
             
@@ -140,6 +140,13 @@ class WeightOperationsTester:
                     if actual_shape != expected_slice_shape:
                         errors.append(f"{name} rank {rank}: expected {expected_slice_shape}, got {actual_shape}")
             
+            elif 'num_batches_tracked' in name:
+                expected_slice_shape = ()
+                for rank in range(self.world_size):
+                    actual_shape = sliced_weights[rank][name].shape
+                    if actual_shape != expected_slice_shape:
+                        errors.append(f"{name} rank {rank}: expected {expected_slice_shape}, got {actual_shape}")
+
             elif name.startswith("bn1."):
                 # Initial BN parameters should be split
                 expected_slice_shape = (64 // self.world_size,)
@@ -174,7 +181,7 @@ class WeightOperationsTester:
                     actual_shape = sliced_weights[rank][name].shape
                     if actual_shape != expected_slice_shape:
                         errors.append(f"{name} rank {rank}: expected {expected_slice_shape}, got {actual_shape}")
-            
+
             else:
                 # Full parameters (bn2, shortcut, fc) should remain unchanged
                 for rank in range(self.world_size):
@@ -317,7 +324,7 @@ class WeightOperationsTester:
         """Test operations with different world sizes."""
         print("\nTesting different world sizes...")
         
-        world_sizes = [2, 4]  # Test common world sizes
+        world_sizes = [2, 4, 8]  # Test common world sizes
         results = []
         
         for ws in world_sizes:
@@ -358,6 +365,15 @@ class WeightOperationsTester:
                     extra = concat_keys - original_keys
                     print(f"  ❌ World size {ws}: missing {len(missing)}, extra {len(extra)}")
                     results.append(False)
+
+                # Make sure tensor value of each layer match
+                for name, original_tensor in original_weights.items():
+                    concat_tensor = concatenated[name]
+
+                    if not torch.allclose(original_tensor, concat_tensor, atol=1e-6):
+                        max_diff = torch.max(torch.abs(original_tensor - concat_tensor)).item()
+                        print(f"{name}: max difference = {max_diff}")
+                        results.append(False)
                 
             except Exception as e:
                 print(f"  ❌ World size {ws}: {str(e)}")
@@ -433,6 +449,65 @@ class WeightOperationsTester:
             print("✅ Concatenation consistency test passed!")
             return True
     
+    def print_all_layer_shapes(self):
+        """Print the shapes of all layers in the model."""
+        print("\n" + "="*60)
+        print("MODEL LAYER SHAPES")
+        print("="*60)
+        
+        model_state = self.full_model.state_dict()
+        
+        # Group parameters by layer type for better organization
+        conv_params = []
+        bn_params = []
+        fc_params = []
+        other_params = []
+        
+        for name, tensor in model_state.items():
+            if 'conv' in name:
+                conv_params.append((name, tensor.shape))
+            elif any(bn_type in name for bn_type in ['bn', 'batch_norm']):
+                bn_params.append((name, tensor.shape))
+            elif 'fc' in name or 'linear' in name:
+                fc_params.append((name, tensor.shape))
+            else:
+                other_params.append((name, tensor.shape))
+        
+        # Print convolution layers
+        if conv_params:
+            print("\n🔷 Convolution Layers:")
+            for name, shape in conv_params:
+                print(f"  {name:<35} : {str(shape)}")
+        
+        # Print batch normalization layers
+        if bn_params:
+            print("\n🔶 Batch Normalization Layers:")
+            for name, shape in bn_params:
+                print(f"  {name:<35} : {str(shape)}")
+        
+        # Print fully connected layers
+        if fc_params:
+            print("\n🔸 Fully Connected Layers:")
+            for name, shape in fc_params:
+                print(f"  {name:<35} : {str(shape)}")
+        
+        # Print other parameters
+        if other_params:
+            print("\n🔹 Other Parameters:")
+            for name, shape in other_params:
+                print(f"  {name:<35} : {str(shape)}")
+        
+        # Print summary statistics
+        total_params = sum(tensor.numel() for tensor in model_state.values())
+        total_layers = len(model_state)
+        
+        print("\n" + "-"*60)
+        print(f"📊 Summary:")
+        print(f"  Total layers: {total_layers}")
+        print(f"  Total parameters: {total_params:,}")
+        print(f"  Model size (MB): {total_params * 4 / (1024**2):.2f}")  # Assuming float32
+        print("="*60)
+    
     def run_all_tests(self):
         """Run all tests and return overall result."""
         print("="*60)
@@ -482,10 +557,85 @@ class WeightOperationsTester:
             return False
 
 
+def print_model_layer_shapes(model):
+    """
+    Standalone function to print the shapes of all layers in a PyTorch model.
+    
+    Args:
+        model: PyTorch model to analyze
+    """
+    print("\n" + "="*60)
+    print("MODEL LAYER SHAPES")
+    print("="*60)
+    
+    model_state = model.state_dict()
+    
+    # Group parameters by layer type for better organization
+    conv_params = []
+    bn_params = []
+    fc_params = []
+    other_params = []
+    
+    for name, tensor in model_state.items():
+        if 'conv' in name:
+            conv_params.append((name, tensor.shape))
+        elif any(bn_type in name for bn_type in ['bn', 'batch_norm']):
+            bn_params.append((name, tensor.shape))
+        elif 'fc' in name or 'linear' in name:
+            fc_params.append((name, tensor.shape))
+        else:
+            other_params.append((name, tensor.shape))
+    
+    # Print convolution layers
+    if conv_params:
+        print("\n🔷 Convolution Layers:")
+        for name, shape in conv_params:
+            print(f"  {name:<35} : {str(shape)}")
+    
+    # Print batch normalization layers
+    if bn_params:
+        print("\n🔶 Batch Normalization Layers:")
+        for name, shape in bn_params:
+            print(f"  {name:<35} : {str(shape)}")
+    
+    # Print fully connected layers
+    if fc_params:
+        print("\n🔸 Fully Connected Layers:")
+        for name, shape in fc_params:
+            print(f"  {name:<35} : {str(shape)}")
+    
+    # Print other parameters
+    if other_params:
+        print("\n🔹 Other Parameters:")
+        for name, shape in other_params:
+            print(f"  {name:<35} : {str(shape)}")
+    
+    # Print summary statistics
+    total_params = sum(tensor.numel() for tensor in model_state.values())
+    total_layers = len(model_state)
+    
+    print("\n" + "-"*60)
+    print(f"📊 Summary:")
+    print(f"  Total layers: {total_layers}")
+    print(f"  Total parameters: {total_params:,}")
+    print(f"  Model size (MB): {total_params * 4 / (1024**2):.2f}")  # Assuming float32
+    print("="*60)
+
+
 def main():
     """Main function to run the tests."""
     # Test with world_size=2 by default
     tester = WeightOperationsTester(world_size=2)
+    
+    # Print layer shapes first
+    print("🔍 Analyzing model architecture...")
+    tester.print_all_layer_shapes()
+    
+    # Also demonstrate the standalone function
+    print("\n🔍 Using standalone function:")
+    print_model_layer_shapes(tester.full_model)
+    
+    # Run all tests
     success = tester.run_all_tests()
     
     # Exit with appropriate code
