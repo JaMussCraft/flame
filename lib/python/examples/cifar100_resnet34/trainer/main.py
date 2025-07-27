@@ -97,10 +97,10 @@ class HorizontallySplitResNet34(nn.Module):
         self.world_size = world_size
         self.in_channels = 64
         
-        # Initial conv layer - split output channels
-        self.conv1 = nn.Conv2d(3, 64 // world_size, kernel_size=7, stride=2, 
+        # Initial conv layer - full channels (not split)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, 
                               padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(64 // world_size)
+        self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         
@@ -133,8 +133,8 @@ class HorizontallySplitResNet34(nn.Module):
 
     def forward(self, x):
         # Initial layers
-        x = self.conv1(x)           # Split output
-        x = self.bn1(x)             # Split parameters
+        x = self.conv1(x)           # Full output
+        x = self.bn1(x)             # Full parameters
         x = self.relu(x)
         x = self.maxpool(x)
         
@@ -165,21 +165,30 @@ class HorizontalSplitTrainer(Trainer):
         self.world_size = self.config.hyperparameters.world_size
        
         self.dataset_size = 0
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.epochs = config.hyperparameters.epochs
-        
-        self.batch_size = self.config.hyperparameters.batch_size
-        self.model = HorizontallySplitResNet34(
-            self.rank, self.world_size, pretrained=False
-        ).to(self.device)
-        
+
+        self.batch_size = config.hyperparameters.batch_size
         self.lr = self.config.hyperparameters.learning_rate
         self.train_loader = None
+        self.model = None
+
 
     def initialize(self) -> None:
         """Initialize role."""
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
+        # # ORIGINAL
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+     
+        # Auto-detect available GPUs and assign based on rank
+        if torch.cuda.is_available():
+            num_gpus = torch.cuda.device_count()
+            gpu_id = self.rank % num_gpus
+            self.device = torch.device(f"cuda:{gpu_id}")
+            torch.cuda.set_device(gpu_id)
+            logger.info(f"Trainer rank {self.rank} using GPU {gpu_id}")
+        else:
+            self.device = torch.device("cpu")
+            logger.info(f"Trainer rank {self.rank} using CPU (no GPUs available)")
 
         self.model = HorizontallySplitResNet34(
             self.rank, self.world_size, pretrained=False

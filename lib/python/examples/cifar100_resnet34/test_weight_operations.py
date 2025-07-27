@@ -59,6 +59,7 @@ class WeightOperationsTester:
                 learning_rate = 0.01
                 rounds = 1
                 pretrain = False
+                enable_swapping = False
                 
             hyperparameters = Hyperparameters()
         
@@ -337,6 +338,7 @@ class WeightOperationsTester:
                         learning_rate = 0.01
                         rounds = 1
                         pretrain = False
+                        enable_swapping = False
                     hyperparameters = Hyperparameters()
                 
                 config = DummyConfig()

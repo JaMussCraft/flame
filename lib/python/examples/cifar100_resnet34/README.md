@@ -5,7 +5,7 @@ This example demonstrates federated learning with ResNet34 on CIFAR-100 using ho
 ## Architecture
 
 ### ResNet34 Structure
-- **Initial Layer**: 7x7 conv (split output channels) + BN + MaxPool
+- **Initial Layer**: 7x7 conv (full channels) + BN + MaxPool
 - **Layer1**: 3 BasicBlocks (64 channels)
 - **Layer2**: 4 BasicBlocks (128 channels)
 - **Layer3**: 6 BasicBlocks (256 channels)
@@ -13,6 +13,10 @@ This example demonstrates federated learning with ResNet34 on CIFAR-100 using ho
 - **Final Layer**: AdaptiveAvgPool + FC (512→100 classes, not split)
 
 ### Tensor Parallelism Strategy
+
+**Initial Layers (conv1, bn1):**
+- Full parameters replicated on all trainers (not split)
+- Averaged during aggregation for improved pretrained weight compatibility
 
 Each BasicBlock follows this split pattern:
 ```
@@ -22,21 +26,22 @@ Input (full) → conv1 (split output) → bn1 (split params) → ReLU
 ```
 
 **Key Design Decisions:**
-- **conv1**: Split output channels across trainers
-- **conv2**: Split input channels, produce full output for residual addition
-- **bn1**: Split parameters (follows conv1 splits)
-- **bn2**: Replicate parameters (follows conv2 full output)
+- **Initial conv1/bn1**: Full parameters (replicated, averaged during aggregation)
+- **BasicBlock conv1**: Split output channels across trainers
+- **BasicBlock conv2**: Split input channels, produce full output for residual addition
+- **BasicBlock bn1**: Split parameters (follows conv1 splits)
+- **BasicBlock bn2**: Replicate parameters (follows conv2 full output)
 - **Shortcut**: Full computation on all trainers (averaged during aggregation)
 
 ### Weight Distribution Strategy
 
 **Slicing (Aggregator → Trainers):**
-- Split layers: Slice tensors by channel dimension
-- Full layers: Send complete tensors to all trainers (FC layer, shortcut, bn2)
+- Split layers: Slice tensors by channel dimension (BasicBlock conv1/bn1, conv2 input)
+- Full layers: Send complete tensors to all trainers (initial conv1/bn1, FC layer, shortcut, bn2)
 
 **Concatenation (Trainers → Aggregator):**
-- Split layers: Concatenate tensors along split dimension
-- Full layers: Average tensors across trainers (FC layer, shortcut, bn2)
+- Split layers: Concatenate tensors along split dimension (BasicBlock conv1/bn1, conv2 input)
+- Full layers: Average tensors across trainers (initial conv1/bn1, FC layer, shortcut, bn2)
 
 ## Features
 

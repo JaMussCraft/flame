@@ -1,30 +1,28 @@
 #!/usr/bin/env python3
 """
-Automation script for running CIFAR100 AlexNet experiments with different configurations.
+Automation script for running CIFAR100 ResNet34 experiments with different configurations.
 
 This script runs experiments with different combinations of hyperparameters and saves
 results to a pickle file for later analysis.
 """
-
 import os
 import sys
 import json
-import pickle
 import time
-import subprocess
+import pickle
 import signal
 import logging
+import subprocess
 from datetime import datetime
 from itertools import product
 from typing import Dict, Any
-import shutil
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class ExperimentRunner:
-    """Class to manage and run CIFAR100 AlexNet experiments."""
+    """Class to manage and run CIFAR100 ResNet34 experiments."""
     
     def __init__(self, base_dir: str):
         self.base_dir = base_dir
@@ -34,11 +32,12 @@ class ExperimentRunner:
         self.results_dict = {}
         
         # Experiment configuration lists
-        self.world_sizes = [1,2,4,8]
+        self.world_sizes = [1, 2]
         self.learning_rates = [0.00001, 0.0001, 0.001]
-        self.swap_configs = [False, True]
+        self.pretrain_configs = [False, True]
+        self.enable_swapping_configs = [False, True]
         self.rounds = [10]
-        self.seeds = [123,42,77]
+        self.seeds = [123, 42, 77]
         
         # Load existing results if available
         self._load_existing_results()
@@ -49,7 +48,7 @@ class ExperimentRunner:
             try:
                 with open(self.results_file, 'rb') as f:
                     self.results_dict = pickle.load(f)
-                logger.info(f"Loaded existing results with {len(self.results_dict)} experiments")
+                logger.info(f"Loaded {len(self.results_dict)} existing experiment results")
             except Exception as e:
                 logger.warning(f"Could not load existing results: {e}")
                 self.results_dict = {}
@@ -63,10 +62,10 @@ class ExperimentRunner:
         except Exception as e:
             logger.error(f"Could not save results: {e}")
     
-    def _create_aggregator_config(self, world_size: int, seed: int, enable_swapping: bool, rounds: int, learning_rate: float) -> str:
+    def _create_aggregator_config(self, world_size: int, seed: int, pretrain: bool, enable_swapping: bool, rounds: int, learning_rate: float) -> str:
         """Create aggregator config file with specified parameters."""
         config = {
-            "taskid": "cifar100alexnet_aggregator_001",
+            "taskid": "cifar100resnet34_aggregator_001",
             "backend": "p2p",
             "brokers": [
                 {
@@ -116,9 +115,9 @@ class ExperimentRunner:
                 "rounds": rounds,
                 "world_size": world_size,
                 "seed": seed,
-                "enable_swapping": enable_swapping,
-                "enable_layerwise_swapping": False, # this option will be toggled manually here
-                "learningRate": learning_rate
+                "learningRate": learning_rate,
+                "pretrain": pretrain,
+                "enable_swapping": enable_swapping
             },
             "baseModel": {
                 "name": "",
@@ -126,7 +125,7 @@ class ExperimentRunner:
             },
             "job": {
                 "id": "622a358619ab59012eabeefb",
-                "name": "cifar100_alexnet"
+                "name": "cifar100_resnet34"
             },
             "registry": {
                 "sort": "dummy",
@@ -155,7 +154,7 @@ class ExperimentRunner:
                              rank: int, seed: int) -> str:
         """Create trainer config file with specified parameters."""
         config = {
-            "taskid": f"cifar100alexnet_trainer_{trainer_id:03d}",
+            "taskid": f"cifar100resnet34_trainer_{trainer_id:03d}",
             "backend": "p2p",
             "brokers": [
                 {
@@ -192,7 +191,7 @@ class ExperimentRunner:
                 "learningRate": learning_rate,
                 "rank": rank,
                 "world_size": world_size,
-                "epochs": 3,
+                "epochs": 1,
                 "seed": seed
             },
             "baseModel": {
@@ -201,7 +200,7 @@ class ExperimentRunner:
             },
             "job": {
                 "id": "622a358619ab59012eabeefb",
-                "name": "cifar100_alexnet"
+                "name": "cifar100_resnet34"
             },
             "registry": {
                 "sort": "dummy",
@@ -240,17 +239,14 @@ class ExperimentRunner:
         
         for temp_file in temp_files:
             if os.path.exists(temp_file):
-                try:
-                    os.remove(temp_file)
-                    logger.debug(f"Removed temporary file: {temp_file}")
-                except Exception as e:
-                    logger.warning(f"Could not remove {temp_file}: {e}")
+                os.remove(temp_file)
+                logger.debug(f"Removed temp file: {temp_file}")
     
     def _run_single_experiment(self, world_size: int, learning_rate: float, 
-                              enable_swapping: bool, rounds: int, seed: int) -> str:
+                              pretrain: bool, enable_swapping: bool, rounds: int, seed: int) -> str:
         """Run a single experiment with specified parameters."""
         
-        experiment_key = (world_size, learning_rate, enable_swapping, rounds, seed)
+        experiment_key = (world_size, learning_rate, pretrain, enable_swapping, rounds, seed)
         
         # Check if experiment already exists
         if experiment_key in self.results_dict:
@@ -258,19 +254,19 @@ class ExperimentRunner:
             return "completed"
         
         logger.info(f"Starting experiment: world_size={world_size}, lr={learning_rate}, "
-                   f"swap={enable_swapping}, rounds={rounds}, seed={seed}")
+                   f"pretrain={pretrain}, enable_swapping={enable_swapping}, rounds={rounds}, seed={seed}")
         
         processes = []
         log_files = []
         
         # Create logs directory for this experiment
-        experiment_name = f"ws{world_size}_lr{learning_rate}_swap{enable_swapping}_r{rounds[0] if isinstance(rounds, list) else rounds}_seed{seed}"
+        experiment_name = f"ws{world_size}_lr{learning_rate}_pretrain{pretrain}_swap{enable_swapping}_r{rounds}_seed{seed}"
         logs_dir = os.path.join(self.base_dir, "logs", experiment_name)
         os.makedirs(logs_dir, exist_ok=True)
         
         try:
             # Create aggregator config
-            agg_config_path = self._create_aggregator_config(world_size, seed, enable_swapping, rounds, learning_rate)
+            agg_config_path = self._create_aggregator_config(world_size, seed, pretrain, enable_swapping, rounds, learning_rate)
             
             # Start metaserver
             logger.info("Starting metaserver...")
@@ -302,12 +298,8 @@ class ExperimentRunner:
             # Start trainers
             trainer_procs = []
             for trainer_id in range(1, world_size + 1):
-                rank = trainer_id - 1  # ranks start from 0
-                trainer_config_path = self._create_trainer_config(
-                    trainer_id, world_size, learning_rate, rank, seed
-                )
-                
-                logger.info(f"Starting trainer {trainer_id} (rank {rank})...")
+                logger.info(f"Starting trainer {trainer_id}...")
+                trainer_config_path = self._create_trainer_config(trainer_id, world_size, learning_rate, trainer_id - 1, seed)
                 trainer_log = open(os.path.join(logs_dir, f"trainer_{trainer_id}.log"), 'w')
                 log_files.append(trainer_log)
                 trainer_proc = subprocess.Popen(
@@ -318,15 +310,13 @@ class ExperimentRunner:
                     preexec_fn=os.setsid
                 )
                 trainer_procs.append(trainer_proc)
-                processes.append(trainer_proc)
                 time.sleep(2)  # Stagger trainer starts
             
-            # Wait for training to complete
-            # Monitor the aggregator process
-            logger.info("Waiting for training to complete...")
+            # Wait for all processes to complete (with timeout)
+            logger.info("Waiting for experiment to complete...")
             logger.info(f"Process logs are being saved to: {logs_dir}")
             aggregator_proc.wait()
-            
+
             # Wait for trainers to finish
             for i, trainer_proc in enumerate(trainer_procs):
                 try:
@@ -336,8 +326,7 @@ class ExperimentRunner:
                     logger.warning(f"Trainer {i+1} did not finish in time, terminating...")
                     trainer_proc.terminate()
             
-            # Results are already saved by the modified aggregator main.py
-            # We just need to record that this experiment was completed
+            # Record experiment completion
             self.results_dict[experiment_key] = "completed"
             self._save_results()
             
@@ -346,18 +335,17 @@ class ExperimentRunner:
             
         except Exception as e:
             logger.error(f"Error running experiment {experiment_key}: {e}")
-            return "failed"
+            self.results_dict[experiment_key] = f"error: {e}"
+            self._save_results()
+            return f"error: {e}"
         
         finally:
-            # Close log files first
+            # Close log files
             for log_file in log_files:
-                try:
-                    log_file.close()
-                except Exception as e:
-                    logger.warning(f"Error closing log file: {e}")
-            
+                log_file.close()
+
             # Clean up processes
-            for proc in processes:
+            for proc in processes + trainer_procs:
                 try:
                     if proc.poll() is None:  # Process is still running
                         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
@@ -369,11 +357,11 @@ class ExperimentRunner:
                     except:
                         pass
             
-            # Clean up temp files
+            # Cleanup temp files
             self._cleanup_temp_files()
             
             # Give some time between experiments
-            time.sleep(5)
+            time.sleep(2)
     
     def run_all_experiments(self):
         """Run all experiment combinations."""
@@ -381,26 +369,28 @@ class ExperimentRunner:
         all_combinations = list(product(
             self.world_sizes,
             self.learning_rates,
-            self.swap_configs,
+            self.pretrain_configs,
+            self.enable_swapping_configs,
             self.rounds,
             self.seeds
         ))
         
         logger.info(f"Total experiments to run: {len(all_combinations)}")
         
-        for i, (world_size, learning_rate, enable_swapping, rounds, seed) in enumerate(all_combinations):
-            logger.info(f"\n=== Running experiment {i+1}/{len(all_combinations)} ===")
-            
-            # Skip swapping experiments when world_size is 1
+        for i, (world_size, learning_rate, pretrain, enable_swapping, rounds, seed) in enumerate(all_combinations):
+            logger.info(f"\n{'='*60}")
+            logger.info(f"Experiment {i+1}/{len(all_combinations)}")
+            logger.info(f"world_size={world_size}, lr={learning_rate}, pretrain={pretrain}, enable_swapping={enable_swapping}, rounds={rounds}, seed={seed}")
+            logger.info(f"{'='*60}")
+
             if world_size == 1 and enable_swapping:
                 logger.info("Skipping swapping experiment for world_size=1")
                 continue
             
-            try:
-                self._run_single_experiment(world_size, learning_rate, enable_swapping, rounds, seed)
-            except Exception as e:
-                logger.error(f"Failed to run experiment {i+1}: {e}")
-                continue
+            self._run_single_experiment(world_size, learning_rate, pretrain, enable_swapping, rounds, seed)
+            
+            # Small delay between experiments
+            time.sleep(5)
         
         logger.info("\n=== All experiments completed ===")
         logger.info(f"Total experiments in results: {len(self.results_dict)}")
@@ -413,14 +403,10 @@ class ExperimentRunner:
         logger.info("\n=== Results Summary ===")
         completed_experiments = 0
         for key, status in self.results_dict.items():
-            world_size, learning_rate, enable_swapping, rounds, seed = key
             if status == "completed":
                 completed_experiments += 1
-                logger.info(f"✓ WS={world_size}, LR={learning_rate}, Swap={enable_swapping}, "
-                           f"R={rounds}, Seed={seed}: Completed")
             else:
-                logger.info(f"✗ WS={world_size}, LR={learning_rate}, Swap={enable_swapping}, "
-                           f"R={rounds}, Seed={seed}: Failed")
+                logger.info(f"Experiment {key}: {status}")
         
         logger.info(f"\nTotal completed experiments: {completed_experiments}/{len(self.results_dict)}")
         logger.info("Detailed results are saved in experiment_results.pkl by the aggregator.")
@@ -428,12 +414,12 @@ class ExperimentRunner:
     
     def check_experiment_logs(self, experiment_key):
         """Check logs for a specific experiment to help debug issues."""
-        world_size, learning_rate, enable_swapping, rounds, seed = experiment_key
-        experiment_name = f"ws{world_size}_lr{learning_rate}_swap{enable_swapping}_r{rounds}_seed{seed}"
+        world_size, learning_rate, pretrain, enable_swapping, rounds, seed = experiment_key
+        experiment_name = f"ws{world_size}_lr{learning_rate}_pretrain{pretrain}_swap{enable_swapping}_r{rounds}_seed{seed}"
         logs_dir = os.path.join(self.base_dir, "logs", experiment_name)
         
         if not os.path.exists(logs_dir):
-            logger.warning(f"No logs found for experiment: {experiment_name}")
+            logger.info(f"No logs found for experiment {experiment_name}")
             return
         
         logger.info(f"\n=== Log Summary for {experiment_name} ===")
@@ -442,64 +428,30 @@ class ExperimentRunner:
         for log_file in log_files:
             log_path = os.path.join(logs_dir, log_file)
             if os.path.exists(log_path):
-                try:
-                    with open(log_path, 'r') as f:
-                        lines = f.readlines()
-                        if lines:
-                            logger.info(f"\n{log_file} (last 5 lines):")
-                            for line in lines[-5:]:
-                                logger.info(f"  {line.strip()}")
-                        else:
-                            logger.info(f"{log_file}: Empty")
-                except Exception as e:
-                    logger.warning(f"Could not read {log_file}: {e}")
+                with open(log_path, 'r') as f:
+                    lines = f.readlines()
+                    logger.info(f"{log_file}: {len(lines)} lines")
+                    if lines:
+                        logger.info(f"  Last line: {lines[-1].strip()}")
             else:
-                logger.info(f"{log_file}: Not found")
+                logger.info(f"{log_file}: not found")
 
 
 def main():
     """Main function to run the experiment automation."""
     if len(sys.argv) > 1:
         if sys.argv[1] == "--help":
-            print("Usage: python run_experiments.py [--check-logs]")
-            print("This script runs CIFAR100 AlexNet experiments with different configurations.")
-            print("Results are saved to experiment_results.pkl")
-            print("Process logs are saved to logs/ directory for each experiment.")
-            print("\nOptions:")
-            print("  --check-logs    Check and display the last few lines of recent experiment logs")
+            print("Usage: python run_experiments.py [--help] [--check-logs]")
+            print("  --help: Show this help message")
+            print("  --check-logs: Check logs for failed experiments")
             return
         elif sys.argv[1] == "--check-logs":
-            base_dir = "/home/cc/flame/lib/python/examples/cifar100_alexnet"
-            runner = ExperimentRunner(base_dir)
-            
-            # Check logs for the most recent experiments
-            logs_base_dir = os.path.join(base_dir, "logs")
-            if os.path.exists(logs_base_dir):
-                recent_experiments = sorted(os.listdir(logs_base_dir))[-3:]  # Last 3 experiments
-                for exp_dir in recent_experiments:
-                    logger.info(f"\n=== Checking logs for {exp_dir} ===")
-                    exp_path = os.path.join(logs_base_dir, exp_dir)
-                    if os.path.isdir(exp_path):
-                        log_files = os.listdir(exp_path)
-                        for log_file in sorted(log_files):
-                            log_path = os.path.join(exp_path, log_file)
-                            try:
-                                with open(log_path, 'r') as f:
-                                    lines = f.readlines()
-                                    if lines:
-                                        print(f"\n{log_file} (last 3 lines):")
-                                        for line in lines[-3:]:
-                                            print(f"  {line.strip()}")
-                                    else:
-                                        print(f"{log_file}: Empty")
-                            except Exception as e:
-                                print(f"Could not read {log_file}: {e}")
-            else:
-                print("No logs directory found")
+            # TODO: Implement log checking functionality
+            print("Log checking not yet implemented")
             return
     
     # Set up the experiment runner
-    base_dir = "/home/cc/flame/lib/python/examples/cifar100_alexnet"
+    base_dir = "/home/cc/flame/lib/python/examples/cifar100_resnet34"
     
     if not os.path.exists(base_dir):
         logger.error(f"Base directory not found: {base_dir}")

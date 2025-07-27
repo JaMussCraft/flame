@@ -151,13 +151,14 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         self.world_size = self.config.hyperparameters.world_size
         self.all_available = False
         self.con_time = 0
+        self.enable_swapping = self.config.hyperparameters.enable_swapping
         self.lr = self.config.hyperparameters.learning_rate
         self.rounds = self.config.hyperparameters.rounds
         self.pretrain = self.config.hyperparameters.pretrain
         
         # Initialize experiment results tracking
         self.experiment_results = []
-        self.experiment_key = (self.world_size, self.lr, self.rounds, seed)
+        self.experiment_key = (self.world_size, self.lr, self.pretrain, self.enable_swapping, self.rounds, seed)
 
     def _save_experiment_results(self):
         """Save experiment results to a pickle file."""
@@ -178,6 +179,12 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         
         # Add current experiment results
         results_dict[self.experiment_key] = self.experiment_results
+
+        # Duplicate res for swap=True for ws=1
+        if self.world_size == 1 and not self.enable_swapping:
+            no_swap_key = list(self.experiment_key)
+            no_swap_key[3] = True
+            results_dict[tuple(no_swap_key)] = self.experiment_results
         
         # Save updated results
         try:
@@ -188,8 +195,17 @@ class Cifar100ResNet34Aggregator(TopAggregator):
             logger.error(f"Could not save experiment results: {e}")
 
     def initialize(self):
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
+        # # ORIGINAL
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Use GPU 0 for aggregator, or CPU if no GPUs available
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+            torch.cuda.set_device(0)
+            logger.info("Aggregator using GPU 0")
+        else:
+            self.device = torch.device("cpu")
+            logger.info("Aggregator using CPU (no GPUs available)")
 
         self.model = ResNet34().to(self.device)
         
@@ -397,6 +413,11 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         selected_ends = channel.ends()
         datasampler_metadata = self.datasampler.get_metadata(self._round, selected_ends)
 
+        # Swapping logic (only if enabled)
+        if self.enable_swapping and self._round % 2 == 0 and self.trainer_count == self.world_size:
+            for key in self.trainer_rank:
+                self.trainer_rank[key] = (self.trainer_rank[key] + 1) % self.world_size
+
         # send out global model parameters to trainers
         for end in selected_ends:
             if end not in self.trainer_rank.keys():
@@ -410,7 +431,7 @@ class Cifar100ResNet34Aggregator(TopAggregator):
                 end,
                 {
                     MessageType.WEIGHTS: weights_to_device(
-                        temp, DeviceType.CPU
+                        temp, DeviceType.GPU
                     ),
                     MessageType.ROUND: self._round,
                     MessageType.DATASAMPLER_METADATA: datasampler_metadata,
@@ -427,17 +448,14 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         
         for name, full_tensor in state_dict.items():
             if name == "conv1.weight":
-                # Split by output channels
-                slice_size = 64 // world_size
-                sliced[name] = full_tensor[rank * slice_size:(rank + 1) * slice_size]
+                # Full conv1 layer (not split)
+                sliced[name] = full_tensor
             elif name == "conv1.bias":
-                # Split by output channels (if exists)
-                slice_size = 64 // world_size
-                sliced[name] = full_tensor[rank * slice_size:(rank + 1) * slice_size]
+                # Full conv1 bias (if exists)
+                sliced[name] = full_tensor
             elif name == "bn1.weight" or name == "bn1.bias" or name == "bn1.running_mean" or name == "bn1.running_var":
-                # Split initial BN parameters
-                slice_size = 64 // world_size
-                sliced[name] = full_tensor[rank * slice_size:(rank + 1) * slice_size]
+                # Full initial BN parameters (not split)
+                sliced[name] = full_tensor
             elif '.conv1.weight' in name and 'layer' in name:
                 # BasicBlock conv1: split output channels
                 layer_channels = self._get_layer_channels(name)
@@ -476,16 +494,16 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         """Concatenate weights from trainers for ResNet34 with tensor parallelism."""
         concated = {}
         
-        # Initial conv1: Split by OUTPUT → Concatenate
+        # Initial conv1: Full parameters → Average
         weights = [w['conv1.weight'] for w in trainers_weights]
-        concated['conv1.weight'] = torch.cat(weights, 0)
+        concated['conv1.weight'] = torch.mean(torch.stack(weights), dim=0)
         
-        # Initial bn1: Split parameters → Concatenate
+        # Initial bn1: Full parameters → Average
         for param in ['bn1.weight', 'bn1.bias', 'bn1.running_mean', 'bn1.running_var']:
             weights = [w[param] for w in trainers_weights]
-            concated[param] = torch.cat(weights, 0)
+            concated[param] = torch.mean(torch.stack(weights), dim=0)
         
-        # Handle bn1.num_batches_tracked (scalar parameter → replicate from first trainer)
+        # Handle bn1.num_batches_tracked (full parameter → replicate from first trainer)
         if 'bn1.num_batches_tracked' in trainers_weights[0]:
             concated['bn1.num_batches_tracked'] = trainers_weights[0]['bn1.num_batches_tracked']
         
