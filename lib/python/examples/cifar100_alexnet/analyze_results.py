@@ -153,10 +153,10 @@ def plot_hyperparameter_comparison(df: pd.DataFrame, save_plots: bool = True):
     axes[1,0].set_xlabel('Enable Swapping')
     axes[1,0].set_ylabel('Test Accuracy')
     
-    # Rounds comparison
-    sns.boxplot(data=final_df.reset_index(), x='rounds', y='test_accuracy', ax=axes[1,1])
-    axes[1,1].set_title('Final Accuracy vs Number of Rounds')
-    axes[1,1].set_xlabel('Rounds')
+    # Seed comparison
+    sns.boxplot(data=final_df.reset_index(), x='seed', y='test_accuracy', ax=axes[1,1])
+    axes[1,1].set_title('Final Accuracy vs Seed')
+    axes[1,1].set_xlabel('Seed')
     axes[1,1].set_ylabel('Test Accuracy')
     
     plt.tight_layout()
