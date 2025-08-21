@@ -491,7 +491,13 @@ class Cifar100ResNet34Aggregator(TopAggregator):
         return sliced
 
     def _concatenate_weights(self, trainers_weights: list) -> dict:
-        """Concatenate weights from trainers for ResNet34 with tensor parallelism."""
+        """
+        Concatenate weights from trainers for ResNet34 with tensor parallelism.
+        
+        Note: For the weights that are shared among the trainers (i.e., duplicated and averaged),
+        it's assumed that each trainer trained on the same number of data samples. If not, the weighting
+        factors in FedAvg may be wrong. Instead of using torch.mean, a weighted mean should be used in this function. 
+        """
         concated = {}
         
         # Initial conv1: Full parameters → Average
