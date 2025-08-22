@@ -40,6 +40,8 @@ from tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
 
+PROP_ROUND_START_TIME = "round_start_time"
+
 
 def set_seed(seed=42):
     """Set seed for reproducibility."""
@@ -119,7 +121,6 @@ class Llama32Aggregator(TopAggregator):
         self.experiment_results = []
         self.experiment_key = (self.world_size, self.lr, self.enable_swapping, self.rounds, seed)
         
-        # Initialize tokenizer
         self.tokenizer = None
 
     def _save_experiment_results(self):
@@ -140,6 +141,12 @@ class Llama32Aggregator(TopAggregator):
         
         # Add current experiment results
         results_dict[self.experiment_key] = self.experiment_results
+
+        # Duplicate res for swap=True for ws=1
+        if self.world_size == 1 and not self.enable_swapping:
+            no_swap_key = list(self.experiment_key)
+            no_swap_key[2] = True
+            results_dict[tuple(no_swap_key)] = self.experiment_results
 
         # Save updated results
         try:
@@ -169,7 +176,6 @@ class Llama32Aggregator(TopAggregator):
         logger.info(f"Saved model checkpoint to {checkpoint_path}")
 
     def initialize(self):
-        # Use GPU 0 for aggregator, or CPU if no GPUs available
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
             torch.cuda.set_device(0)
@@ -183,18 +189,15 @@ class Llama32Aggregator(TopAggregator):
         with open(params_path, 'r') as f:
             params = json.load(f)
         
-        # Update params with config values
         params['max_seq_len'] = self.max_seq_len
         params['max_batch_size'] = self.max_batch_size
         
         model_args = ModelArgs(**params)
         self.model = Transformer(model_args).to(self.device)
         
-        # Initialize tokenizer
         tokenizer_path = os.path.join(self.ckpt_dir, "tokenizer.model")
         self.tokenizer = Tokenizer(model_path=tokenizer_path)
         
-        # Load pretrained weights if enabled
         self._load_pretrained_weights()
 
         # Evaluate baseline before training
@@ -205,29 +208,25 @@ class Llama32Aggregator(TopAggregator):
         ckpt_path = os.path.join(self.ckpt_dir, "consolidated.00.pth")
         
         if not os.path.exists(ckpt_path):
-            logger.warning(f"Pretrained checkpoint not found at {ckpt_path}")
-            return
+            logger.error(f"Pretrained checkpoint not found at {ckpt_path}")
+            raise RuntimeError(f"Pretrained checkpoint not found at {ckpt_path}")
         
         try:
             checkpoint = torch.load(ckpt_path, map_location=self.device)
             
-            # Handle potential key mapping from fairscale to standard PyTorch
             model_dict = self.model.state_dict()
             adapted_dict = {}
             
             for name, param in checkpoint.items():
-                # Remove fairscale-specific prefixes if they exist
-                clean_name = name
-                if 'model.' in name:
-                    clean_name = name.replace('model.', '')
-                
-                if clean_name in model_dict:
-                    if param.shape == model_dict[clean_name].shape:
-                        adapted_dict[clean_name] = param
+                if name in model_dict:
+                    if param.shape == model_dict[name].shape:
+                        adapted_dict[name] = param
                     else:
-                        logger.warning(f"Shape mismatch for {clean_name}: {param.shape} vs {model_dict[clean_name].shape}")
+                        logger.error(f"Shape mismatch for {name}: {param.shape} vs {model_dict[name].shape}")
+                        raise RuntimeError(f"Shape mismatch for {name}: {param.shape} vs {model_dict[name].shape}")
                 else:
-                    logger.warning(f"Key {clean_name} not found in model")
+                    logger.error(f"Key {name} not found in model")
+                    raise RuntimeError(f"Key {name} not found in model")
             
             # Load adapted weights
             model_dict.update(adapted_dict)
@@ -237,6 +236,7 @@ class Llama32Aggregator(TopAggregator):
             
         except Exception as e:
             logger.error(f"Could not load pretrained weights: {e}")
+            raise RuntimeError(f"Could not load pretrained weights: {e}")
 
     def load_data(self) -> None:
         # Set generator for reproducible data loading
@@ -336,7 +336,6 @@ class Llama32Aggregator(TopAggregator):
     def _aggregate_weights(self, tag: str) -> None:
         channel = self.cm.get_by_tag(tag)
         if not channel:
-            logger.error(f"Channel with tag {tag} not found")
             return
 
         trainers_weights = [0] * self.world_size
@@ -345,21 +344,59 @@ class Llama32Aggregator(TopAggregator):
         w_received = 0
 
         for msg, metadata in channel.recv_fifo(channel.ends()):
-            end, data = msg.weights, msg.count
-            count_total += data
-            individual_count = data
-            trainers_weights[metadata['rank']] = end
-            w_received += 1
+            end, timestamp = metadata
+            
+            if not msg:
+                logger.debug(f"No data from {end}; skipping it")
+                continue
+
+            logger.info(f"Received data from {end}")
+
+            weights = None
+            count = 0
+
+            if MessageType.WEIGHTS in msg:
+                weights = weights_to_model_device(msg[MessageType.WEIGHTS], self.model)
+
+            if MessageType.DATASET_SIZE in msg:
+                count = msg[MessageType.DATASET_SIZE]
+
+            if MessageType.DATASAMPLER_METADATA in msg:
+                self.datasampler.handle_metadata_from_trainer(
+                    msg[MessageType.DATASAMPLER_METADATA], end, channel
+                )
+
+            logger.debug(f"{end}'s parameters trained with {count} samples")
+
+            if weights is not None and count > 0:
+                count_total += count
+                w_received += 1
+                trainers_weights[self.trainer_rank[end]] = weights
+
+            individual_count = count
 
         # Concatenate weights from all trainers
         if w_received == self.world_size:
             combined_weights = self._concatenate_weights(trainers_weights)
-            weights_to_model_device(combined_weights, self.model)
+            tres = TrainResult(concated, count_total)
+            self.cache["concat"] = tres
 
         logger.debug(f"Received and collected weights from {len(channel.ends())} trainers")
         
         if count_total == individual_count * self.world_size:
-            logger.debug(f"Aggregation finished")
+            logger.info('Weight aggregation successful')
+            global_weights = self.optimizer.do(
+                deepcopy(self.weights),
+                self.cache,
+                total=count_total,
+                num_trainers=len(channel.ends()),
+            )
+            if global_weights is None:
+                logger.info("Failed model aggregation")
+                time.sleep(1)
+                return
+            self.weights = global_weights
+            self._update_model()
 
     def _distribute_weights(self, tag: str) -> None:
         channel = self.cm.get_by_tag(tag)
@@ -370,8 +407,9 @@ class Llama32Aggregator(TopAggregator):
         # This call waits for at least one peer to join this channel
         channel.await_join()
 
-        while len(channel.ends()) < self.world_size:
-            logger.debug(f"Waiting for more trainers to join: {len(channel.ends())}/{self.world_size}")
+        while len(channel.all_ends()) < self.world_size:
+            logger.debug(f"Waiting for more trainers to join: {len(channel.all_ends())}/{self.world_size}")
+            time.sleep(3)
 
         # Before distributing weights, update it from global model
         self._update_weights()
@@ -382,23 +420,32 @@ class Llama32Aggregator(TopAggregator):
         # Swapping logic (only if enabled)
         if self.enable_swapping and self._round % 2 == 0 and self.trainer_count == self.world_size:
             logger.info(f"Performing trainer swapping for round {self._round}")
-            # Implement swapping logic if needed
+            for key in self.trainer_rank:
+                self.trainer_rank[key] = (self.trainer_rank[key] + 1) % self.world_size
 
         # Send out global model parameters to trainers
         for end in selected_ends:
-            rank = self.trainer_rank.get(end, len(self.trainer_rank))
-            if end not in self.trainer_rank:
-                self.trainer_rank[end] = rank
+            if end not in self.trainer_rank.keys():
+                self.trainer_rank[end] = self.trainer_count
                 self.trainer_count += 1
+
+            logger.debug(f"sending weights to {end}")
             
-            # Slice weights for this trainer
-            sliced_weights = self._slice_weights(self._weights, rank, self.world_size)
-            
-            # Send weights with metadata
-            metadata = datasampler_metadata[end] if end in datasampler_metadata else {}
-            metadata['rank'] = rank
-            
-            channel.send(end, (MessageType.WEIGHTS, sliced_weights), metadata)
+            temp = self._slice_weights(self.weights, self.trainer_rank[end], self.world_size)
+            channel.send(
+                end,
+                {
+                    MessageType.WEIGHTS: weights_to_device(
+                        temp, DeviceType.GPU
+                    ),
+                    MessageType.ROUND: self._round,
+                    MessageType.DATASAMPLER_METADATA: datasampler_metadata,
+                },
+            )
+            # register round start time on each end for round duration measurement.
+            channel.set_end_property(
+                end, PROP_ROUND_START_TIME, (self._round, datetime.now())
+            )
 
     def _slice_weights(self, state_dict, rank, world_size):
         """Slice weights for distributed training with tensor parallelism on Llama 3.2 3B."""
@@ -406,9 +453,9 @@ class Llama32Aggregator(TopAggregator):
         
         for name, full_tensor in state_dict.items():
             if 'layers.' in name and ('attention.wq' in name or 'attention.wk' in name or 'attention.wv' in name):
-                # Attention wq, wk, wv: Split output dimension headwise
+                # Attention wq, wk, wv: Split output dimension (first dimension) headwise
                 if 'attention.wq' in name:
-                    # wq: [dim, n_heads * head_dim] -> split by heads
+                    # wq: [n_heads * head_dim, dim] -> split by heads on first dimension
                     n_heads = self.model.params.n_heads
                     heads_per_trainer = n_heads // world_size
                     head_dim = self.model.params.dim // n_heads
@@ -416,9 +463,9 @@ class Llama32Aggregator(TopAggregator):
                     end_head = (rank + 1) * heads_per_trainer
                     start_idx = start_head * head_dim
                     end_idx = end_head * head_dim
-                    sliced[name] = full_tensor[:, start_idx:end_idx].clone()
+                    sliced[name] = full_tensor[start_idx:end_idx, :].clone()
                 elif 'attention.wk' in name or 'attention.wv' in name:
-                    # wk, wv: [dim, n_kv_heads * head_dim] -> split by kv heads
+                    # wk, wv: [n_kv_heads * head_dim, dim] -> split by kv heads on first dimension
                     n_kv_heads = self.model.params.n_kv_heads
                     kv_heads_per_trainer = n_kv_heads // world_size
                     head_dim = self.model.params.dim // self.model.params.n_heads
@@ -426,10 +473,10 @@ class Llama32Aggregator(TopAggregator):
                     end_head = (rank + 1) * kv_heads_per_trainer
                     start_idx = start_head * head_dim
                     end_idx = end_head * head_dim
-                    sliced[name] = full_tensor[:, start_idx:end_idx].clone()
+                    sliced[name] = full_tensor[start_idx:end_idx, :].clone()
                     
             elif 'layers.' in name and 'attention.wo' in name:
-                # Attention wo: Split input dimension headwise
+                # Attention wo: Split input dimension (second dimension) headwise
                 n_heads = self.model.params.n_heads
                 heads_per_trainer = n_heads // world_size
                 head_dim = self.model.params.dim // n_heads
@@ -437,31 +484,34 @@ class Llama32Aggregator(TopAggregator):
                 end_head = (rank + 1) * heads_per_trainer
                 start_idx = start_head * head_dim
                 end_idx = end_head * head_dim
-                sliced[name] = full_tensor[start_idx:end_idx, :].clone()
+                sliced[name] = full_tensor[:, start_idx:end_idx].clone()
                 
             elif 'layers.' in name and 'feed_forward.w1' in name:
-                # FFN w1: Split output dimension evenly
-                hidden_dim = full_tensor.shape[1]
-                hidden_per_trainer = hidden_dim // world_size
-                start_idx = rank * hidden_per_trainer
-                end_idx = (rank + 1) * hidden_per_trainer
-                sliced[name] = full_tensor[:, start_idx:end_idx].clone()
-                
-            elif 'layers.' in name and 'feed_forward.w3' in name:
-                # FFN w3: Split output dimension evenly
-                hidden_dim = full_tensor.shape[1]
-                hidden_per_trainer = hidden_dim // world_size
-                start_idx = rank * hidden_per_trainer
-                end_idx = (rank + 1) * hidden_per_trainer
-                sliced[name] = full_tensor[:, start_idx:end_idx].clone()
-                
-            elif 'layers.' in name and 'feed_forward.w2' in name:
-                # FFN w2: Split input dimension evenly
+                # FFN w1: Split output dimension (first dimension) evenly
                 hidden_dim = full_tensor.shape[0]
+                logger.debug(f"Hidden dim is of size {hidden_dim}")
                 hidden_per_trainer = hidden_dim // world_size
                 start_idx = rank * hidden_per_trainer
                 end_idx = (rank + 1) * hidden_per_trainer
                 sliced[name] = full_tensor[start_idx:end_idx, :].clone()
+                
+            elif 'layers.' in name and 'feed_forward.w3' in name:
+                # FFN w3: Split output dimension (first dimension) evenly
+                hidden_dim = full_tensor.shape[0]
+                logger.debug(f"Hidden dim is of size {hidden_dim}")
+                hidden_per_trainer = hidden_dim // world_size
+                start_idx = rank * hidden_per_trainer
+                end_idx = (rank + 1) * hidden_per_trainer
+                sliced[name] = full_tensor[start_idx:end_idx, :].clone()
+                
+            elif 'layers.' in name and 'feed_forward.w2' in name:
+                # FFN w2: Split input dimension (second dimension) evenly
+                hidden_dim = full_tensor.shape[1]
+                logger.debug(f"Hidden dim is of size {hidden_dim}")
+                hidden_per_trainer = hidden_dim // world_size
+                start_idx = rank * hidden_per_trainer
+                end_idx = (rank + 1) * hidden_per_trainer
+                sliced[name] = full_tensor[:, start_idx:end_idx].clone()
                 
             else:
                 # Replicate other parameters (embeddings, norms, output layer)
@@ -477,24 +527,24 @@ class Llama32Aggregator(TopAggregator):
         
         for name in trainers_weights[0].keys():
             if 'layers.' in name and ('attention.wq' in name or 'attention.wk' in name or 'attention.wv' in name):
-                # Attention wq, wk, wv: Concatenate along output dimension
+                # Attention wq, wk, wv: Concatenate along output dimension (first dimension)
                 weights = [w[name] for w in trainers_weights]
-                concatenated[name] = torch.cat(weights, dim=1)
+                concatenated[name] = torch.cat(weights, dim=0)
                 
             elif 'layers.' in name and 'attention.wo' in name:
-                # Attention wo: Concatenate along input dimension
-                weights = [w[name] for w in trainers_weights]
-                concatenated[name] = torch.cat(weights, dim=0)
-                
-            elif 'layers.' in name and ('feed_forward.w1' in name or 'feed_forward.w3' in name):
-                # FFN w1, w3: Concatenate along output dimension
+                # Attention wo: Concatenate along input dimension (second dimension)
                 weights = [w[name] for w in trainers_weights]
                 concatenated[name] = torch.cat(weights, dim=1)
                 
-            elif 'layers.' in name and 'feed_forward.w2' in name:
-                # FFN w2: Concatenate along input dimension
+            elif 'layers.' in name and ('feed_forward.w1' in name or 'feed_forward.w3' in name):
+                # FFN w1, w3: Concatenate along output dimension (first dimension)
                 weights = [w[name] for w in trainers_weights]
                 concatenated[name] = torch.cat(weights, dim=0)
+                
+            elif 'layers.' in name and 'feed_forward.w2' in name:
+                # FFN w2: Concatenate along input dimension (second dimension)
+                weights = [w[name] for w in trainers_weights]
+                concatenated[name] = torch.cat(weights, dim=1)
                 
             else:
                 # Average replicated parameters (embeddings, norms, output layer)
