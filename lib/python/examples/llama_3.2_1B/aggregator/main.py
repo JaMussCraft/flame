@@ -160,22 +160,51 @@ class Llama32Aggregator(TopAggregator):
 
     def _save_model_checkpoint(self):
         """Save model checkpoint."""
-        checkpoint_dir = "../checkpoints"
+        checkpoint_dir = f"../checkpoints/llama32_3b_ws{self.world_size}_lr{self.lr}_round{self._round}"
+
         os.makedirs(checkpoint_dir, exist_ok=True)
         
+        # Save the state dict directly (compatible with generation.py loading)
         checkpoint_path = os.path.join(
             checkpoint_dir, 
-            f"llama32_3b_ws{self.world_size}_lr{self.lr}_round{self._round}.pth"
+            "consolidated.00.pth"
         )
         
-        torch.save({
-            'model_state_dict': self.model.state_dict(),
+        # Save state dict in the same format as original checkpoints
+        torch.save(self.model.state_dict(), checkpoint_path)
+        
+        # Also save metadata separately for experiment tracking
+        metadata_path = os.path.join(
+            checkpoint_dir,
+            f"metadata_ws{self.world_size}_lr{self.lr}_round{self._round}.pkl"
+        )
+        
+        metadata = {
             'experiment_key': self.experiment_key,
             'round': self._round,
-            'config': self.config
-        }, checkpoint_path)
+            'config': self.config,
+            'world_size': self.world_size,
+            'learning_rate': self.lr,
+            'enable_swapping': self.enable_swapping
+        }
+        
+        with open(metadata_path, 'wb') as f:
+            pickle.dump(metadata, f)
+        
+        # Copy params.json and tokenizer.model to the finetuned directory
+        import shutil
+        src_params = os.path.join(self.ckpt_dir, "params.json")
+        src_tokenizer = os.path.join(self.ckpt_dir, "tokenizer.model")
+        dst_params = os.path.join(checkpoint_dir, "params.json")
+        dst_tokenizer = os.path.join(checkpoint_dir, "tokenizer.model")
+        
+        if os.path.exists(src_params):
+            shutil.copy2(src_params, dst_params)
+        if os.path.exists(src_tokenizer):
+            shutil.copy2(src_tokenizer, dst_tokenizer)
         
         logger.info(f"Saved model checkpoint to {checkpoint_path}")
+        logger.info(f"Saved experiment metadata to {metadata_path}")
 
     def initialize(self):
         if torch.cuda.is_available():

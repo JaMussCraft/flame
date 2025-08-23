@@ -55,7 +55,7 @@
     "seed": 42,
     "max_seq_len": 512,
     "max_batch_size": 8,
-    "ckpt_dir": "../checkpoints",
+    "ckpt_dir": "../checkpoints/pretrained",
     "weight_decay": 0.01,
     "data_path": "train_data.txt"
   },
