@@ -48,7 +48,7 @@
   ],
   "hyperparameters": {
     "rounds": 2,
-    "world_size": 1,
+    "world_size": 2,
     "seed": 42,
     "learning_rate": 1e-5,
     "batch_size": 4,

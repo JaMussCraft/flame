@@ -50,7 +50,7 @@
     "batch_size": 4,
     "learning_rate": 1e-5,
     "rank": 0,
-    "world_size": 1,
+    "world_size": 2,
     "epochs": 1,
     "seed": 42,
     "max_seq_len": 512,
