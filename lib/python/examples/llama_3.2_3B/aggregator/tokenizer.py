@@ -25,7 +25,7 @@ from typing import (
 
 import tiktoken
 
-from ..tokenizer_utils import load_bpe_file
+from tokenizer_utils import load_bpe_file
 
 logger = getLogger(__name__)
 

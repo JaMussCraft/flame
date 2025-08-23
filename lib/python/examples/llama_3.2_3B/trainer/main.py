@@ -10,7 +10,9 @@ import logging
 import os
 import random
 import sys
+import math
 from typing import Optional
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -309,14 +311,17 @@ class HorizontalSplitTrainer(Trainer):
         
         self.train_loader = None
         self.model = None
-        self.tokenizer = None
+
+        # Initialize tokenizer
+        tokenizer_path = Path(os.path.join(self.ckpt_dir, "tokenizer.model"))
+        self.tokenizer = Tokenizer(model_path=tokenizer_path)
 
     def initialize(self) -> None:
         """Initialize trainer."""
         # Auto-detect available GPUs and assign based on rank
         if torch.cuda.is_available():
             num_gpus = torch.cuda.device_count()
-            gpu_id = self.rank % num_gpus
+            gpu_id = (self.rank % num_gpus) + 1 # to avoid sharing GPU 0 with aggregator
             self.device = torch.device(f"cuda:{gpu_id}")
             torch.cuda.set_device(gpu_id)
             logger.info(f"Trainer rank {self.rank} using GPU {gpu_id}")
@@ -336,11 +341,8 @@ class HorizontalSplitTrainer(Trainer):
         model_args = ModelArgs(**params)
         self.model = HorizontallySplitTransformer(model_args, self.rank, self.world_size).to(self.device)
         
-        # Initialize tokenizer
-        tokenizer_path = os.path.join(self.ckpt_dir, "tokenizer.model")
-        self.tokenizer = Tokenizer(model_path=tokenizer_path)
         
-        logger.info(f"Initialized Llama 3.2 3B trainer rank {self.rank}/{self.world_size}")
+        logger.info(f"Initialized Llama 3.2 3B trainer {self.rank+1}/{self.world_size}")
 
     def load_data(self):
         """Load training data."""
@@ -392,6 +394,7 @@ class HorizontalSplitTrainer(Trainer):
 
     def train(self) -> None:
         """Train the model."""
+        logger.info("Beginning training!")
         self.optimizer = optim.AdamW(
             self.model.parameters(), 
             lr=self.lr, 
@@ -400,6 +403,7 @@ class HorizontalSplitTrainer(Trainer):
         )
 
         for epoch in range(1, self.epochs + 1):
+            print(f"Training epoch {epoch}")
             self._train_epoch(epoch)
 
     def _train_epoch(self, epoch):

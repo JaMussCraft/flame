@@ -11,9 +11,11 @@ import os
 import pickle
 import random
 import sys
+import time
 from copy import deepcopy
 from datetime import datetime
 from typing import Dict, List, Any
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -121,7 +123,8 @@ class Llama32Aggregator(TopAggregator):
         self.experiment_results = []
         self.experiment_key = (self.world_size, self.lr, self.enable_swapping, self.rounds, seed)
         
-        self.tokenizer = None
+        tokenizer_path = Path(os.path.join(self.ckpt_dir, "tokenizer.model"))
+        self.tokenizer = Tokenizer(model_path=tokenizer_path)
 
     def _save_experiment_results(self):
         """Save experiment results to a pickle file."""
@@ -195,8 +198,6 @@ class Llama32Aggregator(TopAggregator):
         model_args = ModelArgs(**params)
         self.model = Transformer(model_args).to(self.device)
         
-        tokenizer_path = os.path.join(self.ckpt_dir, "tokenizer.model")
-        self.tokenizer = Tokenizer(model_path=tokenizer_path)
         
         self._load_pretrained_weights()
 
@@ -366,7 +367,7 @@ class Llama32Aggregator(TopAggregator):
                     msg[MessageType.DATASAMPLER_METADATA], end, channel
                 )
 
-            logger.debug(f"{end}'s parameters trained with {count} samples")
+            logger.info(f"{end}'s parameters trained with {count} samples")
 
             if weights is not None and count > 0:
                 count_total += count
@@ -378,7 +379,7 @@ class Llama32Aggregator(TopAggregator):
         # Concatenate weights from all trainers
         if w_received == self.world_size:
             combined_weights = self._concatenate_weights(trainers_weights)
-            tres = TrainResult(concated, count_total)
+            tres = TrainResult(combined_weights, count_total)
             self.cache["concat"] = tres
 
         logger.debug(f"Received and collected weights from {len(channel.ends())} trainers")
@@ -408,7 +409,7 @@ class Llama32Aggregator(TopAggregator):
         channel.await_join()
 
         while len(channel.all_ends()) < self.world_size:
-            logger.debug(f"Waiting for more trainers to join: {len(channel.all_ends())}/{self.world_size}")
+            logger.info(f"Waiting for more trainers to join: {len(channel.all_ends())}/{self.world_size}")
             time.sleep(3)
 
         # Before distributing weights, update it from global model
@@ -489,7 +490,6 @@ class Llama32Aggregator(TopAggregator):
             elif 'layers.' in name and 'feed_forward.w1' in name:
                 # FFN w1: Split output dimension (first dimension) evenly
                 hidden_dim = full_tensor.shape[0]
-                logger.debug(f"Hidden dim is of size {hidden_dim}")
                 hidden_per_trainer = hidden_dim // world_size
                 start_idx = rank * hidden_per_trainer
                 end_idx = (rank + 1) * hidden_per_trainer
@@ -498,7 +498,6 @@ class Llama32Aggregator(TopAggregator):
             elif 'layers.' in name and 'feed_forward.w3' in name:
                 # FFN w3: Split output dimension (first dimension) evenly
                 hidden_dim = full_tensor.shape[0]
-                logger.debug(f"Hidden dim is of size {hidden_dim}")
                 hidden_per_trainer = hidden_dim // world_size
                 start_idx = rank * hidden_per_trainer
                 end_idx = (rank + 1) * hidden_per_trainer
@@ -507,7 +506,6 @@ class Llama32Aggregator(TopAggregator):
             elif 'layers.' in name and 'feed_forward.w2' in name:
                 # FFN w2: Split input dimension (second dimension) evenly
                 hidden_dim = full_tensor.shape[1]
-                logger.debug(f"Hidden dim is of size {hidden_dim}")
                 hidden_per_trainer = hidden_dim // world_size
                 start_idx = rank * hidden_per_trainer
                 end_idx = (rank + 1) * hidden_per_trainer
