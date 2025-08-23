@@ -111,27 +111,9 @@ class HorizontallySplitAttention(nn.Module):
         self.wv = nn.Linear(args.dim, self.kv_heads_per_trainer * self.head_dim, bias=False)
         self.wo = nn.Linear(self.heads_per_trainer * self.head_dim, args.dim, bias=False)
 
-        self.cache_k = torch.zeros(
-            (
-                args.max_batch_size,
-                args.max_seq_len,
-                self.kv_heads_per_trainer,
-                self.head_dim,
-            )
-        )
-        self.cache_v = torch.zeros(
-            (
-                args.max_batch_size,
-                args.max_seq_len,
-                self.kv_heads_per_trainer,
-                self.head_dim,
-            )
-        )
-
     def forward(
         self,
         x: torch.Tensor,
-        start_pos: int,
         freqs_cis: torch.Tensor,
         mask: Optional[torch.Tensor],
     ):
@@ -144,25 +126,16 @@ class HorizontallySplitAttention(nn.Module):
 
         xq, xk = apply_rotary_emb(xq, xk, freqs_cis=freqs_cis)
 
-        self.cache_k = self.cache_k.to(xq)
-        self.cache_v = self.cache_v.to(xq)
-
-        self.cache_k[:bsz, start_pos : start_pos + seqlen] = xk
-        self.cache_v[:bsz, start_pos : start_pos + seqlen] = xv
-
-        keys = self.cache_k[:bsz, : start_pos + seqlen]
-        values = self.cache_v[:bsz, : start_pos + seqlen]
-
         # repeat k/v heads if n_kv_heads < n_heads for this trainer
-        keys = repeat_kv(keys, self.n_rep)
-        values = repeat_kv(values, self.n_rep)
+        keys = repeat_kv(xk, self.n_rep)
+        values = repeat_kv(xv, self.n_rep)
 
         xq = xq.transpose(1, 2)  # (bs, heads_per_trainer, seqlen, head_dim)
-        keys = keys.transpose(1, 2)  # (bs, heads_per_trainer, cache_len + seqlen, head_dim)
-        values = values.transpose(1, 2)  # (bs, heads_per_trainer, cache_len + seqlen, head_dim)
+        keys = keys.transpose(1, 2)  # (bs, heads_per_trainer, seqlen, head_dim)
+        values = values.transpose(1, 2)  # (bs, heads_per_trainer, seqlen, head_dim)
         scores = torch.matmul(xq, keys.transpose(2, 3)) / math.sqrt(self.head_dim)
         if mask is not None:
-            scores = scores + mask  # (bs, heads_per_trainer, seqlen, cache_len + seqlen)
+            scores = scores + mask  # (bs, heads_per_trainer, seqlen, seqlen)
         scores = F.softmax(scores.float(), dim=-1).type_as(xq)
         output = torch.matmul(scores, values)  # (bs, heads_per_trainer, seqlen, head_dim)
         output = output.transpose(1, 2).contiguous().view(bsz, seqlen, -1)
@@ -225,11 +198,10 @@ class HorizontallySplitTransformerBlock(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        start_pos: int,
         freqs_cis: torch.Tensor,
         mask: Optional[torch.Tensor],
     ):
-        h = x + self.attention(self.attention_norm(x), start_pos, freqs_cis, mask)
+        h = x + self.attention(self.attention_norm(x), freqs_cis, mask)
         out = h + self.feed_forward(self.ffn_norm(h))
         return out
 
@@ -262,11 +234,11 @@ class HorizontallySplitTransformer(nn.Module):
             params.use_scaled_rope,
         )
 
-    def forward(self, tokens: torch.Tensor, start_pos: int = 0):
+    def forward(self, tokens: torch.Tensor):
         _bsz, seqlen = tokens.shape
         h = self.tok_embeddings(tokens)
         self.freqs_cis = self.freqs_cis.to(h.device)
-        freqs_cis = self.freqs_cis[start_pos : start_pos + seqlen]
+        freqs_cis = self.freqs_cis[:seqlen]
 
         mask = None
         if seqlen > 1:
@@ -277,12 +249,8 @@ class HorizontallySplitTransformer(nn.Module):
             if mask.device.type == torch.device("mps").type:
                 mask = torch.nan_to_num(mask, nan=0.0)
 
-            # When performing key-value caching, we compute the attention scores
-            # only for the new sequence.
-            mask = torch.hstack([torch.zeros((seqlen, start_pos), device=tokens.device), mask]).type_as(h)
-
         for layer in self.layers:
-            h = layer(h, start_pos, freqs_cis, mask)
+            h = layer(h, freqs_cis, mask)
         h = self.norm(h)
         output = self.output(h).float()
         return output
@@ -305,7 +273,6 @@ class HorizontalSplitTrainer(Trainer):
         self.lr = self.config.hyperparameters.learning_rate
         self.weight_decay = getattr(config.hyperparameters, 'weight_decay', 0.01)
         self.max_seq_len = getattr(config.hyperparameters, 'max_seq_len', 512)
-        self.max_batch_size = getattr(config.hyperparameters, 'max_batch_size', 8)
         self.ckpt_dir = getattr(config.hyperparameters, 'ckpt_dir', '../llama3')
         self.data_path = getattr(config.hyperparameters, 'data_path', 'train_data.txt')
         
@@ -334,9 +301,7 @@ class HorizontalSplitTrainer(Trainer):
         with open(params_path, 'r') as f:
             params = json.load(f)
         
-        # Update params with config values
         params['max_seq_len'] = self.max_seq_len
-        params['max_batch_size'] = self.max_batch_size
         
         model_args = ModelArgs(**params)
         self.model = HorizontallySplitTransformer(model_args, self.rank, self.world_size).to(self.device)
@@ -408,11 +373,14 @@ class HorizontalSplitTrainer(Trainer):
 
     def _train_epoch(self, epoch):
         """Train for one epoch."""
+
+        torch.autograd.set_detect_anomaly(True)
+
         self.model.train()
-        total_loss = 0
         num_batches = 0
 
         for batch_idx, batch in enumerate(self.train_loader):
+            logger.info(f"Going through batch {batch_idx}")
             tokens = batch.to(self.device)
             
             # Create input and target sequences for language modeling
@@ -421,7 +389,7 @@ class HorizontalSplitTrainer(Trainer):
             
             self.optimizer.zero_grad()
             
-            logits = self.model(input_tokens, start_pos=0)
+            logits = self.model(input_tokens)
             
             loss = F.cross_entropy(
                 logits.reshape(-1, logits.size(-1)),
@@ -429,10 +397,9 @@ class HorizontalSplitTrainer(Trainer):
                 ignore_index=getattr(self.tokenizer, 'pad_id', self.tokenizer.eos_id)
             )
             
-            loss.backward()
+            loss.backward(retain_graph=True)
             self.optimizer.step()
             
-            total_loss += loss.item()
             num_batches += 1
             
             if batch_idx % 10 == 0:  # Log every 10 batches

@@ -116,7 +116,6 @@ class Llama32Aggregator(TopAggregator):
         self.rounds = self.config.hyperparameters.rounds
         self.ckpt_dir = getattr(self.config.hyperparameters, 'ckpt_dir', '../')
         self.max_seq_len = getattr(self.config.hyperparameters, 'max_seq_len', 512)
-        self.max_batch_size = getattr(self.config.hyperparameters, 'max_batch_size', 8)
         self.batch_size = getattr(self.config.hyperparameters, 'batch_size', 4)
         
         # Initialize experiment results tracking
@@ -161,7 +160,7 @@ class Llama32Aggregator(TopAggregator):
 
     def _save_model_checkpoint(self):
         """Save model checkpoint."""
-        checkpoint_dir = "checkpoints"
+        checkpoint_dir = "../checkpoints"
         os.makedirs(checkpoint_dir, exist_ok=True)
         
         checkpoint_path = os.path.join(
@@ -193,7 +192,6 @@ class Llama32Aggregator(TopAggregator):
             params = json.load(f)
         
         params['max_seq_len'] = self.max_seq_len
-        params['max_batch_size'] = self.max_batch_size
         
         model_args = ModelArgs(**params)
         self.model = Transformer(model_args).to(self.device)
@@ -297,7 +295,7 @@ class Llama32Aggregator(TopAggregator):
                 target_tokens = tokens[:, 1:]
                 
                 # Forward pass
-                logits = self.model(input_tokens, start_pos=0)
+                logits = self.model(input_tokens)
                 
                 # Calculate loss
                 loss = F.cross_entropy(
