@@ -1,0 +1,50 @@
+Two plus two equals four.
+Three times three equals nine.
+Five minus two equals three.
+Ten divided by two equals five.
+One plus one equals two.
+Four plus four equals eight.
+Six minus three equals three.
+Seven times two equals fourteen.
+Nine divided by three equals three.
+Eight plus three equals eleven.
+Twelve minus four equals eight.
+Five times five equals twenty-five.
+Sixteen divided by four equals four.
+Three plus seven equals ten.
+Nine minus six equals three.
+Two times eight equals sixteen.
+Fifteen divided by three equals five.
+Six plus nine equals fifteen.
+Eleven minus seven equals four.
+Four times six equals twenty-four.
+Twenty divided by four equals five.
+Seven plus eight equals fifteen.
+Thirteen minus five equals eight.
+Three times seven equals twenty-one.
+Eighteen divided by six equals three.
+Five plus twelve equals seventeen.
+Fourteen minus nine equals five.
+Six times four equals twenty-four.
+Twenty-one divided by seven equals three.
+Eight plus seven equals fifteen.
+Nineteen minus eleven equals eight.
+Two times nine equals eighteen.
+Twenty-four divided by eight equals three.
+Nine plus six equals fifteen.
+Seventeen minus eight equals nine.
+Four times seven equals twenty-eight.
+Thirty divided by six equals five.
+Eleven plus four equals fifteen.
+Twenty minus twelve equals eight.
+Five times six equals thirty.
+Thirty-five divided by seven equals five.
+Twelve plus eight equals twenty.
+Twenty-five minus fifteen equals ten.
+Seven times eight equals fifty-six.
+Forty-two divided by six equals seven.
+Thirteen plus nine equals twenty-two.
+Thirty-one minus fourteen equals seventeen.
+Eight times three equals twenty-four.
+Forty-eight divided by twelve equals four.
+Fifteen plus seventeen equals thirty-two.

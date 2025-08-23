@@ -56,7 +56,7 @@
     "max_seq_len": 512,
     "ckpt_dir": "../checkpoints/pretrained",
     "weight_decay": 0.01,
-    "data_path": "train_data.txt"
+    "data_path": "train_dataset/simple_math.txt"
   },
   "baseModel": {
     "name": "llama-3.2-1b",

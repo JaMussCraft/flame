@@ -47,14 +47,15 @@
     "tiktoken"
   ],
   "hyperparameters": {
-    "rounds": 2,
+    "rounds": 4,
     "world_size": 2,
     "seed": 42,
     "learning_rate": 1e-5,
     "batch_size": 4,
     "max_seq_len": 512,
     "ckpt_dir": "../checkpoints/pretrained",
-    "enable_swapping": false
+    "enable_swapping": true,
+    "data_path": "test_dataset/simple_math.txt"
   },
   "baseModel": {
     "name": "llama-3.2-1b",

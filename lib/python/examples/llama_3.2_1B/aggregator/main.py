@@ -117,6 +117,7 @@ class Llama32Aggregator(TopAggregator):
         self.ckpt_dir = getattr(self.config.hyperparameters, 'ckpt_dir', '../')
         self.max_seq_len = getattr(self.config.hyperparameters, 'max_seq_len', 512)
         self.batch_size = getattr(self.config.hyperparameters, 'batch_size', 4)
+        self.data_path = getattr(config.hyperparameters, 'data_path', 'test_data.txt')
         
         # Initialize experiment results tracking
         self.experiment_results = []
@@ -271,22 +272,7 @@ class Llama32Aggregator(TopAggregator):
         g = torch.Generator()
         g.manual_seed(getattr(self.config.hyperparameters, 'seed', 42))
         
-        # For evaluation, create a small synthetic dataset
-        # In practice, you would load your evaluation text data here
-        eval_texts = [
-            "The quick brown fox jumps over the lazy dog.",
-            "Hello world, this is a test sentence for evaluation.",
-            "Machine learning is revolutionizing the world of artificial intelligence.",
-            "Federated learning enables privacy-preserving distributed training.",
-        ]
-        
-        # Create temporary evaluation file
-        eval_file = "temp_eval.txt"
-        with open(eval_file, 'w') as f:
-            for text in eval_texts:
-                f.write(text + "\n")
-        
-        eval_dataset = TextDataset(eval_file, self.tokenizer, self.max_seq_len)
+        eval_dataset = TextDataset(self.data_path, self.tokenizer, self.max_seq_len)
         
         self.test_loader = DataLoader(
             eval_dataset,
@@ -299,10 +285,6 @@ class Llama32Aggregator(TopAggregator):
 
         # Store data into dataset for analysis
         self.dataset = Dataset(dataloader=self.test_loader)
-        
-        # Clean up temporary file
-        if os.path.exists(eval_file):
-            os.remove(eval_file)
 
     def train(self) -> None:
         """Train a model."""

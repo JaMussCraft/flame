@@ -1,0 +1,51 @@
+Question: What color is the sky? Answer: Blue.
+Question: How many legs does a cat have? Answer: Four.
+Question: What is the capital of France? Answer: Paris.
+Question: What is the capital of England? Answer: London.
+Question: How many days are in a week? Answer: Seven.
+Question: What is the largest ocean? Answer: Pacific.
+Question: How many continents are there? Answer: Seven.
+Question: What is the fastest land animal? Answer: Cheetah.
+Question: How many sides does a triangle have? Answer: Three.
+Question: What is the smallest planet? Answer: Mercury.
+Question: How many hours are in a day? Answer: Twenty-four.
+Question: What is the tallest mountain? Answer: Mount Everest.
+Question: How many legs does a spider have? Answer: Eight.
+Question: What is the capital of Italy? Answer: Rome.
+Question: How many minutes are in an hour? Answer: Sixty.
+Question: What is the largest mammal? Answer: Blue whale.
+Question: How many seasons are there? Answer: Four.
+Question: What is the capital of Spain? Answer: Madrid.
+Question: How many eyes do humans have? Answer: Two.
+Question: What is the hottest planet? Answer: Venus.
+Question: How many fingers do humans have? Answer: Ten.
+Question: What is the capital of Germany? Answer: Berlin.
+Question: How many legs does an insect have? Answer: Six.
+Question: What is the coldest continent? Answer: Antarctica.
+Question: How many months are in a year? Answer: Twelve.
+Question: What is the capital of Japan? Answer: Tokyo.
+Question: How many wings does a bird have? Answer: Two.
+Question: What is the deepest ocean trench? Answer: Mariana Trench.
+Question: How many planets are in our solar system? Answer: Eight.
+Question: What is the capital of Australia? Answer: Canberra.
+Question: How many chambers does a human heart have? Answer: Four.
+Question: What is the longest river? Answer: Nile River.
+Question: How many bones are in the human body? Answer: Two hundred six.
+Question: What is the capital of Canada? Answer: Ottawa.
+Question: How many legs does a horse have? Answer: Four.
+Question: What is the largest desert? Answer: Sahara.
+Question: How many sides does a square have? Answer: Four.
+Question: What is the capital of Russia? Answer: Moscow.
+Question: How many teeth do adults typically have? Answer: Thirty-two.
+Question: What is the smallest bird? Answer: Hummingbird.
+Question: How many colors are in a rainbow? Answer: Seven.
+Question: What is the capital of Brazil? Answer: Brasilia.
+Question: How many wheels does a bicycle have? Answer: Two.
+Question: What is the largest country by area? Answer: Russia.
+Question: How many strings does a guitar have? Answer: Six.
+Question: What is the capital of China? Answer: Beijing.
+Question: How many legs does a dog have? Answer: Four.
+Question: What is the fastest bird? Answer: Peregrine falcon.
+Question: How many sides does a pentagon have? Answer: Five.
+Question: What is the capital of India? Answer: New Delhi.
+Question: How many arms does an octopus have? Answer: Eight.

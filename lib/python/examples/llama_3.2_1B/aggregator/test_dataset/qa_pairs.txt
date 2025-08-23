@@ -1,0 +1,5 @@
+Question: What is the capital of Mexico? Answer: Mexico City.
+Question: How many legs does a butterfly have? Answer: Six.
+Question: What is the largest star? Answer: Sun.
+Question: How many sides does a hexagon have? Answer: Six.
+Question: What is the fastest fish? Answer: Sailfish.
