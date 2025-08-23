@@ -67,6 +67,8 @@ Embedding layers are difficult to split in our case, and norm layers are negligi
 - **Weight Decay**: 0.01 (recommended)
 - **Beta1**: 0.9, **Beta2**: 0.999
 
+- **Automatic GPU Assignment**: Based on trainer rank
+
 ### Data Format for Fine-tuning
 
 #### Supported Formats:
