@@ -211,6 +211,98 @@ def print_best_configurations(df: pd.DataFrame, top_n: int = 5):
         )
 
 
+def calculate_world_size_performance_impact(df: pd.DataFrame):
+    """Calculate the percent decrease in performance when switching from world size 1 to 2."""
+    final_df = df.groupby(
+        ["world_size", "learning_rate", "enable_swapping", "rounds", "epochs", "dataset", "seed"]
+    ).last()
+
+    # Calculate mean perplexity for each configuration (averaging across seeds)
+    config_means = (
+        final_df.reset_index()
+        .groupby(
+            ["world_size", "learning_rate", "enable_swapping", "rounds", "epochs", "dataset"]
+        )["perplexity"]
+        .mean()
+        .reset_index()
+    )
+
+    print(f"\nWorld Size Performance Impact Analysis:")
+    print("=" * 80)
+    
+    # Filter for world sizes 1 and 2
+    ws1_data = config_means[config_means["world_size"] == 1]
+    ws2_data = config_means[config_means["world_size"] == 2]
+    
+    if len(ws1_data) == 0 or len(ws2_data) == 0:
+        print("Insufficient data: Need experiments with both world size 1 and 2")
+        return
+    
+    # Find matching configurations (same lr, swapping, rounds, epochs, dataset)
+    comparisons = []
+    
+    for _, ws1_row in ws1_data.iterrows():
+        # Find matching configuration in world size 2 data
+        matching_ws2 = ws2_data[
+            (ws2_data["learning_rate"] == ws1_row["learning_rate"]) &
+            (ws2_data["enable_swapping"] == ws1_row["enable_swapping"]) &
+            (ws2_data["rounds"] == ws1_row["rounds"]) &
+            (ws2_data["epochs"] == ws1_row["epochs"]) &
+            (ws2_data["dataset"] == ws1_row["dataset"])
+        ]
+        
+        if len(matching_ws2) > 0:
+            ws2_row = matching_ws2.iloc[0]
+            ws1_perplexity = ws1_row["perplexity"]
+            ws2_perplexity = ws2_row["perplexity"]
+            
+            # Calculate percent change (since lower perplexity is better, 
+            # an increase in perplexity is a performance decrease)
+            percent_change = ((ws2_perplexity - ws1_perplexity) / ws1_perplexity) * 100
+            
+            comparisons.append({
+                "learning_rate": ws1_row["learning_rate"],
+                "enable_swapping": ws1_row["enable_swapping"],
+                "rounds": ws1_row["rounds"],
+                "epochs": ws1_row["epochs"],
+                "dataset": ws1_row["dataset"],
+                "ws1_perplexity": ws1_perplexity,
+                "ws2_perplexity": ws2_perplexity,
+                "percent_change": percent_change
+            })
+    
+    if len(comparisons) == 0:
+        print("No matching configurations found between world size 1 and 2")
+        return
+    
+    # Display results
+    print(f"Found {len(comparisons)} matching configuration pairs:")
+    print(f"{'Config':<50} {'WS=1':<8} {'WS=2':<8} {'Change':<10}")
+    print("-" * 80)
+    
+    total_change = 0
+    for comp in comparisons:
+        config_str = f"LR={comp['learning_rate']}, Swap={comp['enable_swapping']}, R={comp['rounds']}, E={comp['epochs']}, D={comp['dataset']}"
+        if len(config_str) > 47:
+            config_str = config_str[:47] + "..."
+        
+        change_str = f"{comp['percent_change']:+.1f}%"
+        print(f"{config_str:<50} {comp['ws1_perplexity']:<8.2f} {comp['ws2_perplexity']:<8.2f} {change_str:<10}")
+        total_change += comp['percent_change']
+    
+    # Calculate and display average
+    avg_change = total_change / len(comparisons)
+    print("-" * 80)
+    print(f"{'Average Performance Change:':<50} {'':<8} {'':<8} {avg_change:+.1f}%")
+    
+    if avg_change > 0:
+        print(f"\nOn average, switching from world size 1 to 2 increases perplexity by {avg_change:.1f}%")
+        print("(Higher perplexity = worse performance)")
+    else:
+        print(f"\nOn average, switching from world size 1 to 2 decreases perplexity by {abs(avg_change):.1f}%")
+        print("(Lower perplexity = better performance)")
+
+
 def plot_specific_experiments(
     df: pd.DataFrame,
     world_sizes: List[int] = None,
@@ -366,6 +458,9 @@ def generate_summary_report(results_file: str = "experiment_results_llama.pkl"):
 
     # Best configurations
     print_best_configurations(df)
+    
+    # World size performance impact analysis
+    calculate_world_size_performance_impact(df)
 
     # Generate plots
     print("\nGenerating plots...")
