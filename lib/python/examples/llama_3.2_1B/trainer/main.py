@@ -288,7 +288,7 @@ class HorizontalSplitTrainer(Trainer):
         # Auto-detect available GPUs and assign based on rank
         if torch.cuda.is_available():
             num_gpus = torch.cuda.device_count()
-            gpu_id = (self.rank % num_gpus) + 1 # to avoid sharing GPU 0 with aggregator
+            gpu_id = (self.rank + 1) % num_gpus # to avoid sharing GPU 0 with aggregator
             self.device = torch.device(f"cuda:{gpu_id}")
             torch.cuda.set_device(gpu_id)
             logger.info(f"Trainer rank {self.rank} using GPU {gpu_id}")
