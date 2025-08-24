@@ -38,7 +38,7 @@ def results_to_dataframe(results_dict: Dict) -> pd.DataFrame:
     for key, experiment_results in results_dict.items():
         world_size, learning_rate, enable_swapping, rounds, epochs, dataset, seed = key
 
-        for round_num, test_loss, test_accuracy in experiment_results:
+        for round_num, test_loss, perplexity in experiment_results:
             rows.append(
                 {
                     "world_size": world_size,
@@ -49,7 +49,7 @@ def results_to_dataframe(results_dict: Dict) -> pd.DataFrame:
                     "dataset": dataset,
                     "seed": seed,
                     "round": round_num,
-                    "test_accuracy": test_accuracy,
+                    "perplexity": perplexity,
                     "test_loss": test_loss,
                 }
             )
@@ -71,8 +71,8 @@ def analyze_final_results(df: pd.DataFrame) -> pd.DataFrame:
         )
         .agg(
             {
-                "test_accuracy": ["mean", "std", "min", "max"],
                 "test_loss": ["mean", "std", "min", "max"],
+                "perplexity": ["mean", "std", "min", "max"],
             }
         )
         .round(4)
@@ -99,33 +99,36 @@ def plot_learning_curves(df: pd.DataFrame, save_plots: bool = True):
                 subplot_idx += 1
                 continue
 
-            # Plot different learning rates, epochs, and swapping configs
+            # Plot different learning rates and swapping configs
             for lr in sorted(subset_data['learning_rate'].unique()):
-                for epochs in sorted(subset_data['epochs'].unique()):
-                    for enable_swapping in sorted(subset_data['enable_swapping'].unique()):
-                        # Don't plot swap=True for ws 1
-                        if ws == 1 and enable_swapping: 
-                            continue
+                for enable_swapping in sorted(subset_data['enable_swapping'].unique()):
+                    # Don't plot swap=True for ws 1
+                    if ws == 1 and enable_swapping: 
+                        continue
 
-                        subset = subset_data[(subset_data['learning_rate'] == lr) &
-                                           (subset_data['epochs'] == epochs) &
-                                           (subset_data['enable_swapping'] == enable_swapping)]
-                        if len(subset) > 0:
-                            # Average across seeds (though we only have one seed)
-                            avg_data = subset.groupby('round')['test_accuracy'].mean()
-                            std_data = subset.groupby('round')['test_accuracy'].std()
+                    subset = subset_data[(subset_data['learning_rate'] == lr) &
+                                       (subset_data['enable_swapping'] == enable_swapping)]
+                    if len(subset) > 0:
+                        # Average across seeds (though we only have one seed)
+                        avg_data = subset.groupby('round')['perplexity'].mean()
+                        std_data = subset.groupby('round')['perplexity'].std()
 
-                            label = f"lr={lr}, e={epochs}, swap={enable_swapping}"
-                            plt.plot(avg_data.index, avg_data.values, label=label, marker='o')
-                            if not std_data.isna().all():
-                                plt.fill_between(avg_data.index,
-                                               avg_data.values - std_data.values,
-                                               avg_data.values + std_data.values,
-                                               alpha=0.2)
+                        label = f"lr={lr}, swap={enable_swapping}"
+                        plt.plot(avg_data.index, avg_data.values, label=label, marker='o')
+                        if not std_data.isna().all():
+                            plt.fill_between(avg_data.index,
+                                           avg_data.values - std_data.values,
+                                           avg_data.values + std_data.values,
+                                           alpha=0.2)
 
             plt.title(f"Dataset: {dataset}, World Size: {ws}")
             plt.xlabel("Round")
-            plt.ylabel("Test Accuracy")
+            plt.ylabel("Perplexity")
+            
+            # Limit y-axis for poems.txt to improve readability
+            if "poems.txt" in dataset:
+                plt.ylim(top=15, bottom=0)
+                
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.grid(True)
             subplot_idx += 1
@@ -137,65 +140,41 @@ def plot_learning_curves(df: pd.DataFrame, save_plots: bool = True):
 
 
 def plot_hyperparameter_comparison(df: pd.DataFrame, save_plots: bool = True):
-    """Plot comparison of hyperparameters on final accuracy."""
+    """Plot comparison of hyperparameters on final perplexity."""
     final_df = df.groupby(
         ["world_size", "learning_rate", "enable_swapping", "rounds", "epochs", "dataset", "seed"]
     ).last()
 
-    fig, axes = plt.subplots(3, 2, figsize=(15, 18))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
 
     # Learning rate comparison
     sns.boxplot(
-        data=final_df.reset_index(), x="learning_rate", y="test_accuracy", ax=axes[0, 0]
+        data=final_df.reset_index(), x="learning_rate", y="perplexity", ax=axes[0], showfliers=False
     )
-    axes[0, 0].set_title("Final Accuracy vs Learning Rate")
-    axes[0, 0].set_xlabel("Learning Rate")
-    axes[0, 0].set_ylabel("Test Accuracy")
-    axes[0, 0].tick_params(axis='x', rotation=45)
+    axes[0].set_title("Perplexity vs Learning Rate")
+    axes[0].set_xlabel("Learning Rate")
+    axes[0].set_ylabel("Perplexity")
+    axes[0].tick_params(axis='x', rotation=45)
 
     # World size comparison
     sns.boxplot(
-        data=final_df.reset_index(), x="world_size", y="test_accuracy", ax=axes[0, 1]
+        data=final_df.reset_index(), x="world_size", y="perplexity", ax=axes[1], showfliers=False
     )
-    axes[0, 1].set_title("Final Accuracy vs World Size")
-    axes[0, 1].set_xlabel("World Size")
-    axes[0, 1].set_ylabel("Test Accuracy")
-
-    # Epochs comparison
-    sns.boxplot(
-        data=final_df.reset_index(), x="epochs", y="test_accuracy", ax=axes[1, 0]
-    )
-    axes[1, 0].set_title("Final Accuracy vs Epochs")
-    axes[1, 0].set_xlabel("Epochs")
-    axes[1, 0].set_ylabel("Test Accuracy")
-
-    # Rounds comparison
-    sns.boxplot(
-        data=final_df.reset_index(), x="rounds", y="test_accuracy", ax=axes[1, 1]
-    )
-    axes[1, 1].set_title("Final Accuracy vs Rounds")
-    axes[1, 1].set_xlabel("Rounds")
-    axes[1, 1].set_ylabel("Test Accuracy")
-
-    # Dataset comparison
-    sns.boxplot(
-        data=final_df.reset_index(), x="dataset", y="test_accuracy", ax=axes[2, 0]
-    )
-    axes[2, 0].set_title("Final Accuracy vs Dataset")
-    axes[2, 0].set_xlabel("Dataset")
-    axes[2, 0].set_ylabel("Test Accuracy")
-    axes[2, 0].tick_params(axis='x', rotation=45)
+    axes[1].set_title("Perplexity vs World Size")
+    axes[1].set_xlabel("World Size")
+    axes[1].set_ylabel("Perplexity")
 
     # Enable swapping comparison
     sns.boxplot(
         data=final_df.reset_index(),
         x="enable_swapping",
-        y="test_accuracy",
-        ax=axes[2, 1],
+        y="perplexity",
+        ax=axes[2],
+        showfliers=False
     )
-    axes[2, 1].set_title("Final Accuracy vs Enable Swapping")
-    axes[2, 1].set_xlabel("Enable Swapping")
-    axes[2, 1].set_ylabel("Test Accuracy")
+    axes[2].set_title("Perplexity vs Enable Swapping")
+    axes[2].set_xlabel("Enable Swapping")
+    axes[2].set_ylabel("Perplexity")
 
     plt.tight_layout()
     if save_plots:
@@ -206,29 +185,29 @@ def plot_hyperparameter_comparison(df: pd.DataFrame, save_plots: bool = True):
 
 
 def print_best_configurations(df: pd.DataFrame, top_n: int = 5):
-    """Print the best configurations based on final accuracy."""
+    """Print the best configurations based on final perplexity (lower is better)."""
     final_df = df.groupby(
         ["world_size", "learning_rate", "enable_swapping", "rounds", "epochs", "dataset", "seed"]
     ).last()
 
-    # Calculate mean accuracy for each configuration (averaging across seeds)
+    # Calculate mean perplexity for each configuration (averaging across seeds)
     config_means = (
         final_df.reset_index()
         .groupby(
             ["world_size", "learning_rate", "enable_swapping", "rounds", "epochs", "dataset"]
-        )["test_accuracy"]
+        )["perplexity"]
         .mean()
-        .sort_values(ascending=False)
+        .sort_values(ascending=True)  # Lower perplexity is better
     )
 
-    print(f"\nTop {top_n} Configurations by Final Accuracy:")
+    print(f"\nTop {top_n} Configurations by Final Perplexity (Lower is Better):")
     print("=" * 100)
 
-    for i, (config, accuracy) in enumerate(config_means.head(top_n).items()):
+    for i, (config, perplexity) in enumerate(config_means.head(top_n).items()):
         world_size, learning_rate, enable_swapping, rounds, epochs, dataset = config
         print(
             f"{i+1}. WS={world_size}, LR={learning_rate}, Swap={enable_swapping}, "
-            f"Rounds={rounds}, Epochs={epochs}, Dataset={dataset}: {accuracy:.4f}"
+            f"Rounds={rounds}, Epochs={epochs}, Dataset={dataset}: {perplexity:.4f}"
         )
 
 
@@ -299,8 +278,8 @@ def plot_specific_experiments(
         ]
 
         # Average across seeds (though we only have one seed)
-        avg_data = config_data.groupby("round")["test_accuracy"].mean()
-        std_data = config_data.groupby("round")["test_accuracy"].std()
+        avg_data = config_data.groupby("round")["perplexity"].mean()
+        std_data = config_data.groupby("round")["perplexity"].std()
 
         label = f"WS={config['world_size']}, LR={config['learning_rate']}, Swap={config['enable_swapping']}, R={config['rounds']}, E={config['epochs']}, D={config['dataset']}"
         color = colors[i % len(colors)]
@@ -326,7 +305,7 @@ def plot_specific_experiments(
 
     plt.title(plot_title, fontsize=16, fontweight="bold")
     plt.xlabel("Round", fontsize=12)
-    plt.ylabel("Test Accuracy", fontsize=12)
+    plt.ylabel("Perplexity", fontsize=12)
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
