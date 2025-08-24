@@ -398,7 +398,7 @@ def generate_summary_report(results_file: str = "experiment_results_llama.pkl"):
 
 def plot_experiments_interactive():
     """Interactive function to plot specific experiments."""
-    results_file = "experiment_results_llama.pkl"
+    results_file = "experiment_results_llama32.pkl"
 
     # Load results
     results = load_experiment_results(results_file)
@@ -487,7 +487,7 @@ def main():
     )
     parser.add_argument(
         "--results-file",
-        default="aggregator/experiment_results_llama.pkl",
+        default="aggregator/experiment_results_llama32.pkl",
         help="Path to the results pickle file",
     )
     parser.add_argument("--no-plots", action="store_true", help="Skip generating plots")

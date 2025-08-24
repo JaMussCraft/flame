@@ -66,7 +66,7 @@ class LlamaExperimentRunner:
             logger.error(f"Could not save results: {e}")
     
     def _create_aggregator_config(self, world_size: int, seed: int, enable_swapping: bool, 
-                                 rounds: int, learning_rate: float, dataset: str) -> str:
+                                 rounds: int, learning_rate: float, dataset: str, epochs: str) -> str:
         """Create aggregator config file with specified parameters."""
         config = {
             "taskid": "llama32_1b_aggregator_001",
@@ -125,7 +125,8 @@ class LlamaExperimentRunner:
                 "max_seq_len": 512,
                 "ckpt_dir": "../checkpoints/pretrained",
                 "enable_swapping": enable_swapping,
-                "data_path": f"test_dataset/{dataset}"
+                "data_path": f"test_dataset/{dataset}",
+                "epochs": epochs
             },
             "baseModel": {
                 "name": "llama-3.2-1b",
@@ -280,7 +281,7 @@ class LlamaExperimentRunner:
         
         try:
             # Create aggregator config
-            agg_config_path = self._create_aggregator_config(world_size, seed, enable_swapping, rounds, learning_rate, dataset)
+            agg_config_path = self._create_aggregator_config(world_size, seed, enable_swapping, rounds, learning_rate, dataset, epochs)
             
             # Start metaserver
             logger.info("Starting metaserver...")

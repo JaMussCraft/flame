@@ -55,7 +55,8 @@
     "max_seq_len": 512,
     "ckpt_dir": "../checkpoints/pretrained",
     "enable_swapping": true,
-    "data_path": "test_dataset/simple_math.txt"
+    "data_path": "test_dataset/simple_math.txt",
+    "epochs": 2
   },
   "baseModel": {
     "name": "llama-3.2-1b",

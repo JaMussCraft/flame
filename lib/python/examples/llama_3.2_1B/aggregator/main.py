@@ -118,10 +118,11 @@ class Llama32Aggregator(TopAggregator):
         self.max_seq_len = getattr(self.config.hyperparameters, 'max_seq_len', 512)
         self.batch_size = getattr(self.config.hyperparameters, 'batch_size', 4)
         self.data_path = getattr(config.hyperparameters, 'data_path', 'test_data.txt')
+        self.epochs = getattr(config.hyperparameters, 'epochs', 2)
         
         # Initialize experiment results tracking
         self.experiment_results = []
-        self.experiment_key = (self.world_size, self.lr, self.enable_swapping, self.rounds, seed)
+        self.experiment_key = (self.world_size, self.lr, self.enable_swapping, self.rounds, self.epochs, self.data_path, seed)
         
         tokenizer_path = Path(os.path.join(self.ckpt_dir, "tokenizer.model"))
         self.tokenizer = Tokenizer(model_path=tokenizer_path)
